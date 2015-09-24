@@ -1,0 +1,57 @@
+db
+	User
+		ID <int>
+		Name <string>
+		Avatar <string>
+		Age <int>
+		Location <string>
+		Biography <string>
+		Website <string>
+		Hash <string>
+	Favourite
+		UserID
+		Saves
+			ID's
+	Saves //store in json file with save id
+		Created <int>
+		Updated <int>
+		Version <int>
+		Score <int>
+		ScoreUp <int>
+		ScoreDown <int>
+		Name <string>
+		ShortName <string>
+		Username <string>
+		Published <bool>
+	Comments
+		SaveID <int>
+		Username <string>
+		UserID <int>
+		Gravatar <string>
+		Text <string>
+		Timestamp <int>
+		FormattedUsername <string>
+	Version //do last
+		Stable
+			Major <string>
+			Minor <string>
+			Build <string>
+			File <string>
+		Beta
+			Major <string>
+			Minor <string>
+			Build <string>
+			File <string>
+		Snapshot
+			Major <string>
+			Minor <string>
+			Build <string>
+			Snapshot <string>
+			File <string>
+	Info
+		LastUserID:<int>
+		LastSaveID:<int>
+		motd:<Array of String>
+
+db.User.findAndModify({query:{name:"iam2"}, update: {$set:{"name": "moo"}}})
+db.User.find().forEach(printjson);

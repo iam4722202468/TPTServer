@@ -7,20 +7,25 @@ var express = require('express'),
 eval(fs.readFileSync('database.js')+'');
 
 app.post('/Save.api',function(req,res){
-	console.log(req.headers['x-auth-user-id']);
-	console.log(req.headers['x-auth-session-key']);
+	userID = req.headers['x-auth-user-id'];
+	userKey = req.headers['x-auth-session-key'];
 	
+	var filename = "";
 	var form = new formidable.IncomingForm({
 		uploadDir: __dirname + '/static'
 	});
-	form.parse(req, function(err, fields, files) {
-		console.log(fields, files);
-	res.send("OK 1857502");
+	form.parse(req, function(err, fields, files) { //Name: 'moo', Description: '', Publish: 'Private'
+		addSave(userID, userKey, fields.Name, fields.Description, fields.Publish, function(returnID) {
+			res.send("OK " + returnID);
+			filename = returnID + '';
+		});
 	});
 	
 	form.on('file', function(field, file) {
 		//rename the incoming file to the file's name
-		fs.rename(file.path, form.uploadDir + "/" + file.name + '.cps');
+		checkLastSaveID(function(data) {
+			fs.rename(file.path, form.uploadDir + "/" + data + '.cps');
+		});
 	})
 });
 

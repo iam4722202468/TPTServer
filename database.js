@@ -21,6 +21,25 @@ function checkUser(userName, userHash, _callback)
 	});
 }
 
+function checkLastSaveID(callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Info');	
+					
+			collection.find().toArray(function(err, docs){
+				var lastUser = docs[0].LastUserID;
+				var lastSave = docs[0].LastSaveID;
+				
+				db.close();
+				callback_(lastSave);
+			});
+		}
+	});
+}
+
 function getUser(userName, _callback)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -131,6 +150,8 @@ function setSession(userName, hash)
 	});
 }
 
+
+
 function getSession(userName, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -143,6 +164,56 @@ function getSession(userName, callback_)
 				callback_(docs[0].SessionID);
 			});
 		}
+	});
+}
+
+function addSave(userID, userKey, saveName, saveDescription, savePublish, callback_)
+{
+	IDtoName(userID, function(userName){
+		getSession(userName, function(dataKey) {
+			if(dataKey == userKey)
+			{
+				MongoClient.connect(url, function (err, db) {
+					if (err) {
+						console.log('Unable to connect to the mongoDB server. Error:', err);
+					} else {
+						console.log('Connection established to', url);
+
+						var collection = db.collection('Info');
+						
+						collection.find().toArray(function(err, docs){
+							var lastUser = docs[0].LastUserID;
+							var lastSave = docs[0].LastSaveID;
+							collection.update({'LastUserID':lastUser}, {$set: {'LastSaveID':lastSave+1}});
+							
+							db.collection("Saves", function(error, collection){
+								collection.insert({
+									ID: lastSave,
+									Created: Date.now(),
+									Updated: Date.now(),
+									Version: 0,
+									Score: 1,
+									ScoreUp: 1,
+									ScoreDown: 0,
+									Name: saveName,
+									ShortName: saveName,
+									Username: userName
+								}, function() {
+									console.log("Successfully inserted with ID " + lastSave);
+									callback_(lastSave);
+								});
+							});
+							db.close();
+						});
+					}
+				});
+			}
+			else
+			{
+				console.log("Invalid login from " + userName);
+				return false;
+			}
+		});
 	});
 }
 

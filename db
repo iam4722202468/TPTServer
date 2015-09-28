@@ -12,7 +12,8 @@ db
 		UserID
 		Saves
 			ID's
-	Saves //store in json file with save id
+	Saves
+		ID <int>
 		Created <int>
 		Updated <int>
 		Version <int>
@@ -49,9 +50,11 @@ db
 			Snapshot <string>
 			File <string>
 	Info
-		LastUserID:<int>
-		LastSaveID:<int>
-		motd:<Array of String>
+		LastUserID <int>
+		LastSaveID <int>
+	Motd
+		Index number <int>
+		Message <string>
 
 db.User.findAndModify({query:{name:"iam2"}, update: {$set:{"name": "moo"}}})
 db.User.find().forEach(printjson);

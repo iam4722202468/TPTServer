@@ -7,24 +7,27 @@ var express = require('express'),
 eval(fs.readFileSync('database.js')+'');
 
 app.post('/Save.api',function(req,res){
-	userID = req.headers['x-auth-user-id'];
-	userKey = req.headers['x-auth-session-key'];
-	
+	var userID = req.headers['x-auth-user-id'];
+	var userKey = req.headers['x-auth-session-key'];
 	var filename = "";
+	var version = 0;
 	var form = new formidable.IncomingForm({
 		uploadDir: __dirname + '/static'
 	});
 	form.parse(req, function(err, fields, files) { //Name: 'moo', Description: '', Publish: 'Private'
-		addSave(userID, userKey, fields.Name, fields.Description, fields.Publish, function(returnID) {
-			res.send("OK " + returnID);
-			filename = returnID + '';
+		console.log(fields);
+		addSave(userID, userKey, fields.Name, fields.Description, fields.Publish, function(data) {
+			res.send("OK " + data.ID);
+			version = data.Version
+			filename = data.ID + '';
 		});
 	});
 	
 	form.on('file', function(field, file) {
 		//rename the incoming file to the file's name
 		checkLastSaveID(function(data) {
-			fs.rename(file.path, form.uploadDir + "/" + data + '.cps');
+			console.log(data + " is the current ID");
+			fs.rename(file.path, form.uploadDir + "/" + filename + '.cps');
 		});
 	})
 });
@@ -42,10 +45,20 @@ app.post('/Vote.api',function(req,res){
 });
 
 app.post('/Browse/Comments.json',function(req,res){
+	var saveID = req.query.ID;
+	var userID = req.headers['x-auth-user-id'];
+	var userKey = req.headers['x-auth-session-key'];
+	
 	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
-		console.log(fields);
-	res.send('{"Status":1}'); //send error message ex. '{"Status":0, "Error":"moo"}'
+		addComment(userID, userKey, fields.Comment, saveID, function(error) {
+			if(!error)
+			{
+				res.send('{"Status":1}');
+			} else {
+				res.send('{"Status":1, "Error":"' + error + '"}');
+			}
+		});
 	});
 });
 

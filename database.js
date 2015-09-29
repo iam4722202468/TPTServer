@@ -21,6 +21,30 @@ function checkUser(userName, userHash, _callback)
 	});
 }
 
+function checkIfSaveExists(userName, saveName, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Saves');	
+			
+			collection.find({$and:[{'Username':userName},{'Name':saveName}]}).toArray(function(err, docs){
+				if(docs.length > 0)
+				{
+					db.close();
+					callback_(docs[0].ID);
+				}
+				else
+				{
+					db.close();
+					callback_(-1);
+				}
+			});
+		}
+	});
+}
+
 function checkLastSaveID(callback_)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -28,7 +52,7 @@ function checkLastSaveID(callback_)
 			console.log('Unable to connect to the mongoDB server. Error:', err);
 		} else {
 			var collection = db.collection('Info');	
-					
+			
 			collection.find().toArray(function(err, docs){
 				var lastUser = docs[0].LastUserID;
 				var lastSave = docs[0].LastSaveID;
@@ -98,9 +122,24 @@ function IDtoName(userID, _callback)
 			console.log('Unable to connect to the mongoDB server. Error:', err);
 		} else {
 			var collection = db.collection('User');
-			collection.find({"ID":parseInt(userID)}).toArray(function(err, docs){
+			collection.find({"ID":parseInt(userID)}).toArray(function(err, docs) {
 				db.close();
 				_callback(docs[0].Name);
+			});
+		}
+	});
+}
+
+function getSaveVersion(saveID, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Saves');
+			collection.find({"ID":saveID}).toArray(function(err, docs){
+				db.close();
+				callback_(docs[0].ID);
 			});
 		}
 	});
@@ -150,8 +189,6 @@ function setSession(userName, hash)
 	});
 }
 
-
-
 function getSession(userName, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -186,24 +223,36 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 							var lastSave = docs[0].LastSaveID;
 							collection.update({'LastUserID':lastUser}, {$set: {'LastSaveID':lastSave+1}});
 							
-							db.collection("Saves", function(error, collection){
-								collection.insert({
-									ID: lastSave,
-									Created: Date.now(),
-									Updated: Date.now(),
-									Version: 0,
-									Score: 1,
-									ScoreUp: 1,
-									ScoreDown: 0,
-									Name: saveName,
-									ShortName: saveName,
-									Username: userName
-								}, function() {
-									console.log("Successfully inserted with ID " + lastSave);
-									callback_(lastSave);
-								});
+							checkIfSaveExists(userName, saveName, function(newSaveID) {
+								if(newSaveID < 0)
+								{
+									db.collection("Saves", function(error, collection){
+										collection.insert({
+											ID: lastSave,
+											Created: Date.now(),
+											Updated: Date.now(),
+											Version: 0,
+											Score: 1,
+											ScoreUp: 1,
+											ScoreDown: 0,
+											Name: saveName,
+											ShortName: saveName,
+											Username: userName
+										}, function() {
+											console.log("Successfully inserted with ID " + lastSave);
+											callback_({'ID':lastSave, 'Version':0});
+										});
+									});
+									db.close();
+								}
+								else
+								{
+									console.log("Save " + newSaveID + " already in database")
+									getSaveVersion(newSaveID, function(lastVerion) {
+										callback_({'ID':newSaveID, 'Version':lastVerion});
+									});
+								}
 							});
-							db.close();
 						});
 					}
 				});
@@ -213,6 +262,15 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 				console.log("Invalid login from " + userName);
 				return false;
 			}
+		});
+	});
+}
+
+function addComment(userID, userKey, comment, saveID, callback_)
+{
+	IDtoName(userID, function(userName) {
+		getSession(userName, function(dataKey) {
+			callback_();
 		});
 	});
 }
@@ -229,3 +287,4 @@ function login(userName, callback_)
 		});
 	});
 }
+//You can't say there are no comments; This *is* a comment

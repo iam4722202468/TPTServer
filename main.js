@@ -2,32 +2,41 @@ var express = require('express'),
 	app = express(),
 	http = require('http').Server(app),
 	fs = require('fs'),
-	formidable = require('formidable');
+	formidable = require('formidable'),
+	mkdirp = require('mkdirp');
 
 eval(fs.readFileSync('database.js')+'');
+
+function saveVersion(saveID, version)
+{
+	mkdirp('./static/'+saveID, function(err) { 
+		fs.createReadStream('./static/'+saveID+'.cps').pipe(fs.createWriteStream('./static/'+saveID+'/'+saveID+'_'+version+'.cps'));
+	});
+}
 
 app.post('/Save.api',function(req,res){
 	var userID = req.headers['x-auth-user-id'];
 	var userKey = req.headers['x-auth-session-key'];
-	var filename = "";
-	var version = 0;
+	
+	var filePath = "";
+	
 	var form = new formidable.IncomingForm({
-		uploadDir: __dirname + '/static'
+		uploadDir: __dirname + '/static' //where you want saves to be uploaded
 	});
-	form.parse(req, function(err, fields, files) { //Name: 'moo', Description: '', Publish: 'Private'
-		console.log(fields);
+	form.parse(req, function(err, fields, file) { //Name: 'moo', Description: '', Publish: 'Private'
 		addSave(userID, userKey, fields.Name, fields.Description, fields.Publish, function(data) {
 			res.send("OK " + data.ID);
 			version = data.Version
 			filename = data.ID + '';
+			fs.rename(filePath, form.uploadDir + "/" + filename + '.cps');
+			saveVersion(filename, version);
 		});
 	});
 	
 	form.on('file', function(field, file) {
-		//rename the incoming file to the file's name
 		checkLastSaveID(function(data) {
 			console.log(data + " is the current ID");
-			fs.rename(file.path, form.uploadDir + "/" + filename + '.cps');
+			filePath = file.path;
 		});
 	})
 });

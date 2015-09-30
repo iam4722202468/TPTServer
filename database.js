@@ -139,7 +139,7 @@ function getSaveVersion(saveID, callback_)
 			var collection = db.collection('Saves');
 			collection.find({"ID":saveID}).toArray(function(err, docs){
 				db.close();
-				callback_(docs[0].ID);
+				callback_(docs[0].Version);
 			});
 		}
 	});
@@ -221,11 +221,11 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 						collection.find().toArray(function(err, docs){
 							var lastUser = docs[0].LastUserID;
 							var lastSave = docs[0].LastSaveID;
-							collection.update({'LastUserID':lastUser}, {$set: {'LastSaveID':lastSave+1}});
 							
 							checkIfSaveExists(userName, saveName, function(newSaveID) {
 								if(newSaveID < 0)
 								{
+									collection.update({'LastUserID':lastUser}, {$set: {'LastSaveID':lastSave+1}});
 									db.collection("Saves", function(error, collection){
 										collection.insert({
 											ID: lastSave,
@@ -247,9 +247,14 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 								}
 								else
 								{
+									collection = db.collection('Saves');
+									
 									console.log("Save " + newSaveID + " already in database")
-									getSaveVersion(newSaveID, function(lastVerion) {
-										callback_({'ID':newSaveID, 'Version':lastVerion});
+									
+									getSaveVersion(newSaveID, function(lastVersion) {
+										collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
+										console.log("The last version is " + parseInt(lastVersion+1));
+										callback_({'ID':newSaveID, 'Version':lastVersion+1});
 									});
 								}
 							});

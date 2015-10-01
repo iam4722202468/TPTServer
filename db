@@ -26,6 +26,7 @@ db
 		Published <bool>
 	Comments
 		SaveID <int>
+		CommentID <int>
 		Username <string>
 		UserID <int>
 		Gravatar <string>
@@ -55,6 +56,10 @@ db
 	Motd
 		Index number <int>
 		Message <string>
+	Votes
+		SaveID <int>
+		UserID <int>
+		Vote <int>
 
 db.User.findAndModify({query:{name:"iam2"}, update: {$set:{"name": "moo"}}})
 db.User.find().forEach(printjson);

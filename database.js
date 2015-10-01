@@ -2,6 +2,13 @@ var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb://localhost:27017/tpt';
 
+function saveVersion(saveID, version)
+{
+	mkdirp('./static/'+saveID, function(err) { 
+		fs.createReadStream('./static/'+saveID+'.cps').pipe(fs.createWriteStream('./static/'+saveID+'/'+saveID+'_'+version+'.cps'));
+	});
+}
+
 function checkUser(userName, userHash, _callback)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -271,11 +278,63 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 	});
 }
 
+function getComments(saveID, start, length, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Comments');
+			
+			collection.find({'SaveID':saveID}).toArray(function(err, docs) {
+				if(length == -1)
+				{
+					db.close();
+					callback_(docs);
+				} else {
+					pages = Math.floor(docs.length/length)+1;
+					relativePage = Math.floor(start/length) % pages;
+					db.close();
+					callback_(docs.slice(relativePage*20, parseInt(start+length)));
+				}
+			});
+		}
+	});
+}
+
 function addComment(userID, userKey, comment, saveID, callback_)
 {
 	IDtoName(userID, function(userName) {
 		getSession(userName, function(dataKey) {
-			callback_();
+			if(dataKey == userKey)
+			{
+				MongoClient.connect(url, function (err, db) {
+					if (err) {
+						console.log('Unable to connect to the mongoDB server. Error:', err);
+						callback("Database problem");
+					} else {
+						var collection = db.collection('Comments');
+						getComments(saveID, 0, -1, function(comments) {
+							collection.insert({
+								SaveID: saveID,
+								CommentID: comments.length,
+								Username: userName,
+								UserID: userID,
+								Gravatar: "",
+								Text: comment,
+								Timestamp: Date.now(),
+								FormattedUsername: userName
+							}, function() {
+								console.log("Successfully inserted with Comment " + comment);
+								db.close();
+								callback_();
+							});
+						});
+					}
+				});
+			} else {
+				callback_("Invalid Login");
+			}
 		});
 	});
 }

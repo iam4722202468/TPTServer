@@ -20,6 +20,7 @@ db
 		Score <int>
 		ScoreUp <int>
 		ScoreDown <int>
+		Views <int>
 		Name <string>
 		ShortName <string>
 		Username <string>

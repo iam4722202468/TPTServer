@@ -9,6 +9,40 @@ function saveVersion(saveID, version)
 	});
 }
 
+function getSaveInfo(saveID, _callback)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			getDBInfo('Saves', 'ID', saveID, function(data) {
+				if(data.length > 0)
+				{
+					if(data[0].Views === undefined)
+					{
+						changeDBInfo('Saves', 'ID', saveID, 'Views', 1, function(returnval)
+						{
+							console.log(returnval);
+						});
+					}
+					else
+					{
+						changeDBInfo('Saves', 'ID', saveID, 'Views', parseInt(data[0].Views+1), function(returnval) {
+							console.log(returnval);
+						});
+					}
+				}
+				getDBInfo('Comments', 'SaveID', saveID, function(data2) {
+					delete data[0]._id;
+					data[0].Comments = data2.length;
+					_callback(data[0]);
+					db.close();
+				});
+			});
+		}
+	});
+}
+
 function checkUser(userName, userHash, _callback)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -236,14 +270,16 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 									db.collection("Saves", function(error, collection){
 										collection.insert({
 											ID: lastSave,
-											Created: Date.now(),
-											Updated: Date.now(),
+											Created: Math.floor(new Date() / 1000),
+											Updated: Math.floor(new Date() / 1000),
 											Version: 0,
 											Score: 1,
 											ScoreUp: 1,
 											ScoreDown: 0,
 											Name: saveName,
 											ShortName: saveName,
+											Description: saveDescription,
+											Published: savePublish,
 											Username: userName
 										}, function() {
 											console.log("Successfully inserted with ID " + lastSave);
@@ -260,6 +296,7 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 									
 									getSaveVersion(newSaveID, function(lastVersion) {
 										collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
+										collection.update({"ID" : newSaveID}, {$set: {'Updated':Math.floor(new Date() / 1000)}});
 										console.log("The last version is " + parseInt(lastVersion+1));
 										callback_({'ID':newSaveID, 'Version':lastVersion+1});
 									});
@@ -286,7 +323,7 @@ function getComments(saveID, start, length, callback_)
 		} else {
 			var collection = db.collection('Comments');
 			
-			collection.find({'SaveID':saveID}).toArray(function(err, docs) {
+			collection.find({'SaveID':parseInt(saveID)}).toArray(function(err, docs) {
 				if(length == -1)
 				{
 					db.close();
@@ -316,13 +353,13 @@ function addComment(userID, userKey, comment, saveID, callback_)
 						var collection = db.collection('Comments');
 						getComments(saveID, 0, -1, function(comments) {
 							collection.insert({
-								SaveID: saveID,
+								SaveID: parseInt(saveID),
 								CommentID: comments.length,
 								Username: userName,
 								UserID: userID,
 								Gravatar: "",
 								Text: comment,
-								Timestamp: Date.now(),
+								Timestamp: Math.floor(new Date() / 1000),
 								FormattedUsername: userName
 							}, function() {
 								console.log("Successfully inserted with Comment " + comment);

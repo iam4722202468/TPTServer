@@ -15,7 +15,12 @@ function getSaveInfo(saveID, _callback)
 		if (err) {
 			console.log('Unable to connect to the mongoDB server. Error:', err);
 		} else {
-			getDBInfo('Saves', 'ID', saveID, function(data) {
+			var name = 'ID';
+			var value = saveID;
+			var query = {};
+			query[name] = parseInt(value);
+			
+			getDBInfo('Saves', query, function(data) {
 				if(data.length > 0)
 				{
 					if(data[0].Views === undefined)
@@ -32,10 +37,21 @@ function getSaveInfo(saveID, _callback)
 						});
 					}
 				}
-				getDBInfo('Comments', 'SaveID', saveID, function(data2) {
-					delete data[0]._id;
-					data[0].Comments = data2.length;
-					_callback(data[0]);
+				
+				var name = 'SaveID';
+				var value = saveID;
+				var query = {};
+				query[name] = parseInt(value);
+				
+				getDBInfo('Comments', query, function(data2) {
+					if(data.length > 0)
+					{
+						delete data[0]._id;
+						data[0].Comments = data2.length;
+						_callback(data[0]);
+					} else {
+						_callback(-1);
+					}
 					db.close();
 				});
 			});
@@ -123,7 +139,6 @@ function getUser(userName, _callback)
 								toReturn.User.Username = userName;
 							else if(name != '_id' && name != 'Hash' && name != 'sessionID')
 								toReturn.User[name] = docs[0][name];
-								
 						}
 					}
 					
@@ -156,7 +171,7 @@ function generateHash()
 	}
 }
 
-function IDtoName(userID, _callback)
+function IDtoName(userID, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -165,7 +180,7 @@ function IDtoName(userID, _callback)
 			var collection = db.collection('User');
 			collection.find({"ID":parseInt(userID)}).toArray(function(err, docs) {
 				db.close();
-				_callback(docs[0].Name);
+				callback_(docs[0].Name);
 			});
 		}
 	});
@@ -240,6 +255,62 @@ function getSession(userName, callback_)
 			collection.find({"Name":userName}).toArray(function(err, docs){
 				db.close();
 				callback_(docs[0].SessionID);
+			});
+		}
+	});
+}
+
+function saveVote(userID, userKey, saveID, voteDirection, callback_)
+{
+	IDtoName(userID, function(userName) {
+		getSession(userName, function(dataKey) {
+			getVote(userID, saveID, function(userVote) {
+				if(userVote == 0)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+							if(voteDirection == "Up")
+								var voteInt = 1;
+							else
+								var voteInt = -1;
+							db.collection("Votes", function(error, collection) {
+								collection.insert({
+									SaveID: saveID,
+									UserID: userID,
+									Vote: voteInt
+								}, function() {
+									console.log(userName + " successfully voted on save " + saveID);
+									db.close();
+									callback_("Success");
+								});
+							});
+						}
+					});
+				} else {
+					callback_('You already voted');
+				}
+			});
+		});
+	});
+}
+
+function getVote(userID, saveID, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Votes');
+			
+			collection.find({$and:[{'SaveID':saveID},{'UserID':userID}]}).toArray(function(err, docs){
+				db.close();
+				
+				if(docs.length < 1)
+					callback_(0);
+				else
+					callback_(docs[0].Vote)
 			});
 		}
 	});

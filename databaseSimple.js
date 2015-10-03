@@ -1,15 +1,10 @@
-function getDBInfo(dbCollection, searchKey, searchValue, _callback)
+function getDBInfo(dbCollection, query, _callback)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
 			console.log('Unable to connect to the mongoDB server. Error:', err);
 		} else {
 			var collection = db.collection(dbCollection);
-			
-			var name = searchKey;
-			var value = searchValue;
-			var query = {};
-			query[name] = parseInt(value);
 			
 			collection.find(query).toArray(function(err, docs){
 				db.close();

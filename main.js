@@ -39,10 +39,17 @@ app.post('/Vote.api',function(req,res){
 	console.log(req.headers['x-auth-user-id']);
 	console.log(req.headers['x-auth-session-key']);
 	
+	var userID = req.headers['x-auth-user-id'];
+	var userKey = req.headers['x-auth-session-key'];
+	
 	var form = new formidable.IncomingForm();
-	form.parse(req, function(err, fields, files) {
-		console.log(fields.ID);
-		console.log(fields.Action);
+	form.parse(req, function(err, fields, files) {		
+		var voteDirection = fields.Action;
+		var saveID = fields.ID;
+		saveVote(userID, userKey, saveID, voteDirection, function(returnval) {
+			console.log(returnval);
+		});
+		
 	res.send("OK"); //send error message ex. "You can not vote for yourself!"
 	});
 });
@@ -72,9 +79,20 @@ app.get('/Browse.json',function(req,res){
 });
 app.get('/Browse/View.json',function(req,res){
 	console.log('Browse.json/View.json');
+	
+	var userID = req.headers['x-auth-user-id'];
+	var userKey = req.headers['x-auth-session-key'];
+	
   	getSaveInfo(req.query.ID, function(data) {
-		res.send(data);
-		console.log(data);
+		if(data != -1)
+		{
+			getVote(userID, req.query.ID, function(voteDirection) {
+				data.ScoreMine = voteDirection;
+				res.send(data);
+			});
+		} else {
+			res.send('{"Status":0,"Error":"Could not load save."}');
+		}
 	});
 	//res.send('{"ID":2,"Favourite":false,"Score":102,"ScoreUp":178,"ScoreDown":76,"Views":28781,"ShortName":"LOGIC","Name":"LOGIC","Description":"No description provided.","DateCreated":0,"Date":1353731824,"Username":"marbdy","Comments":692,"Published":false,"Version":0,"Tags":["firstsave","coolness","postlogicgates","stickynote9","whatisnull","null","firstwoo","savenulllow","itscool","city"],"ScoreMine":0}');
 });

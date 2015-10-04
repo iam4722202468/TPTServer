@@ -48,13 +48,48 @@ function getSaveInfo(saveID, _callback)
 					{
 						delete data[0]._id;
 						data[0].Comments = data2.length;
-						_callback(data[0]);
+						
+						checkTotalVotes(saveID, function(voteData) {
+							data[0].Score = voteData.Up - voteData.Down;
+							data[0].ScoreUp = voteData.Up;
+							data[0].ScoreDown = voteData.Down;
+							
+							_callback(data[0]);
+						});
+						
 					} else {
 						_callback(-1);
 					}
 					db.close();
 				});
 			});
+		}
+	});
+}
+
+function checkTotalVotes(saveID, callback_)
+{
+	var name = 'SaveID';
+	var value = saveID;
+	var query = {};
+	query[name] = parseInt(value);
+	var totalVotesUp = 0;
+	var totalVotesDown = 0;
+	
+	getDBInfo('Votes', query, function(voteArray) {
+		for(var x in voteArray)
+		{
+			if(voteArray[x].Vote == 1)
+				totalVotesUp += 1;
+			else if(voteArray[x].Vote == -1)
+				totalVotesDown += 1;
+			
+			if(x == voteArray.length-1)
+				callback_({'Up':totalVotesUp, 'Down':totalVotesDown});
+		}
+		if(voteArray.length == 0)
+		{
+			callback_({'Up':totalVotesUp, 'Down':totalVotesDown});
 		}
 	});
 }
@@ -277,8 +312,8 @@ function saveVote(userID, userKey, saveID, voteDirection, callback_)
 								var voteInt = -1;
 							db.collection("Votes", function(error, collection) {
 								collection.insert({
-									SaveID: saveID,
-									UserID: userID,
+									SaveID: parseInt(saveID),
+									UserID: parseInt(userID),
 									Vote: voteInt
 								}, function() {
 									console.log(userName + " successfully voted on save " + saveID);
@@ -304,7 +339,7 @@ function getVote(userID, saveID, callback_)
 		} else {
 			var collection = db.collection('Votes');
 			
-			collection.find({$and:[{'SaveID':saveID},{'UserID':userID}]}).toArray(function(err, docs){
+			collection.find({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]}).toArray(function(err, docs){
 				db.close();
 				
 				if(docs.length < 1)
@@ -455,7 +490,7 @@ function login(userName, callback_)
 	
 	getSession(userName, function(data) {
 		getUser(userName, function(userdata) {
-			callback_('{"Status":1,"UserID":' + JSON.parse(userdata).User.ID + ',"SessionID":"' + data + '","SessionKey":"POTATOPOTATOPOTATO"}'); //{"Status":1,"UserID":47804,"SessionID":"A12B4CFVTTBTBT4NVI84598G58G958","SessionKey":"DB12346736","Elevation":"None","Notifications":[]}
+			callback_('{"Status":1,"UserID":' + JSON.parse(userdata).User.ID + ',"SessionID":"' + data + '","SessionKey":"' + data + '"}'); //{"Status":1,"UserID":47804,"SessionID":"A12B4CFVTTBTBT4NVI84598G58G958","SessionKey":"DB12346736","Elevation":"None","Notifications":[]}
 		});
 	});
 }

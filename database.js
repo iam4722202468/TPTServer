@@ -2,6 +2,68 @@ var mongodb = require('mongodb');
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb://localhost:27017/tpt';
 
+function getTags(saveID, callback_)
+{
+	var name = 'SaveID';
+	var value = saveID;
+	var query = {};
+	query[name] = parseInt(value);
+	
+	getDBInfo('Tags', query, function(data) {
+		var returnArray = [];
+		for(x in data)
+		{
+			returnArray.push(data[x].Tag);
+			if(parseInt(x)+1 == data.length)
+			{
+				callback_(returnArray);
+			}
+		}
+	});
+}
+
+function addTag(saveID, tagValue, userKey, callback_)
+{
+	var userKey = userKey.split('|');
+	
+	if(userKey.length > 1)
+	{
+		var userID = userKey[0];
+		var userHash = userKey[1];
+		
+		console.log(userKey);
+		IDtoName(userID, function(userName){
+			getSession(userName, function(dataKey) {
+				console.log(dataKey);
+				if(dataKey == userHash)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+							db.collection("Tags", function(error, collection) {
+								collection.insert({
+									SaveID: parseInt(saveID),
+									UserID: parseInt(userID),
+									Tag: tagValue
+								}, function() {
+									console.log(userName + " successfully added tag to save " + saveID);
+									db.close();
+									callback_();
+								});
+							});
+						}
+					});
+				} else {
+					callback_('Invalid Login');
+				}
+			});
+		});
+	} else {
+		callback_('User login incorrect');
+	}
+}
+
 function saveVersion(saveID, version)
 {
 	mkdirp('./static/'+saveID, function(err) { 
@@ -54,7 +116,10 @@ function getSaveInfo(saveID, _callback)
 							data[0].ScoreUp = voteData.Up;
 							data[0].ScoreDown = voteData.Down;
 							
-							_callback(data[0]);
+							getTags(saveID, function(data3) {
+								data[0].Tags = data3;
+								_callback(data[0]);
+							});
 						});
 						
 					} else {
@@ -490,7 +555,7 @@ function login(userName, callback_)
 	
 	getSession(userName, function(data) {
 		getUser(userName, function(userdata) {
-			callback_('{"Status":1,"UserID":' + JSON.parse(userdata).User.ID + ',"SessionID":"' + data + '","SessionKey":"' + data + '"}'); //{"Status":1,"UserID":47804,"SessionID":"A12B4CFVTTBTBT4NVI84598G58G958","SessionKey":"DB12346736","Elevation":"None","Notifications":[]}
+			callback_('{"Status":1,"UserID":' + JSON.parse(userdata).User.ID + ',"SessionID":"' + data + '","SessionKey":"' + JSON.parse(userdata).User.ID + '|' + data + '"}'); //{"Status":1,"UserID":47804,"SessionID":"A12B4CFVTTBTBT4NVI84598G58G958","SessionKey":"DB12346736","Elevation":"None","Notifications":[]}
 		});
 	});
 }

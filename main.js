@@ -104,15 +104,32 @@ app.get('/Browse/Comments.json',function(req,res){
 		res.send(saves);
 	})
 });
+
 app.get('/Browse/Tags.json',function(req,res){
-  console.log(req.query);
-  console.log('/Browse/Tags.json');
-  res.end();
+	console.log(req.query);
+	console.log('/Browse/Tags.json');
+	
+	var form = new formidable.IncomingForm();
+	form.parse(req, function(err, fields, files) {
+		console.log(fields);
+	});
+	
+	res.end();
 });
+
 app.get('/Browse/EditTag.json',function(req,res){
-  console.log(req.query);
-  console.log('/Browse/EditTag.json');
-  res.end();
+	console.log(req.query);
+	console.log('/Browse/EditTag.json');
+	
+	//{ Op: 'add', ID: '2', Tag: 'asdf', Key: 'G5VDA4HRRM' }
+	
+	if(req.query.Op ==  'add')
+		addTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
+			if(data !== undefined)
+				res.send('{"Status":0, "Error":' + data + '}');
+			else
+				res.send('{"Status":1}');
+		});
 });
 app.get('/Browse/Delete.json',function(req,res){
   console.log(req.query);

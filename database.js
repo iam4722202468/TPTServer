@@ -34,7 +34,6 @@ function addTag(saveID, tagValue, userKey, callback_)
 		console.log(userKey);
 		IDtoName(userID, function(userName){
 			getSession(userName, function(dataKey) {
-				console.log(dataKey);
 				if(dataKey == userHash)
 				{
 					MongoClient.connect(url, function (err, db) {
@@ -61,6 +60,38 @@ function addTag(saveID, tagValue, userKey, callback_)
 		});
 	} else {
 		callback_('User login incorrect');
+	}
+}
+
+function removeTag(saveID, tagValue, userKey, callback_)
+{
+	var userKey = userKey.split('|');
+	
+	if(userKey.length > 1)
+	{
+		var userID = userKey[0];
+		var userHash = userKey[1];
+		
+		console.log(userKey);
+		IDtoName(userID, function(userName){
+			getSession(userName, function(dataKey) {
+				if(dataKey == userHash)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+							var collection = db.collection('Tags');
+							collection.remove({$and:[{'SaveID':parseInt(saveID)},{'Tag':tagValue}]});
+							db.close();
+							callback_();
+						}
+					});
+				} else {
+					callback_('Invalid Login');
+				}
+			});
+		});
 	}
 }
 

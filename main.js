@@ -105,7 +105,7 @@ app.get('/Browse/Comments.json',function(req,res){
 	})
 });
 
-app.get('/Browse/Tags.json',function(req,res){
+app.get('/Browse/Tags.json',function(req,res) {
 	console.log(req.query);
 	console.log('/Browse/Tags.json');
 	
@@ -128,7 +128,28 @@ app.get('/Browse/EditTag.json',function(req,res){
 			if(data !== undefined)
 				res.send('{"Status":0, "Error":' + data + '}');
 			else
-				res.send('{"Status":1}');
+			{
+				var toSend = {};
+				toSend.Status = 1;
+				getTags(req.query.ID, function(data) {
+					toSend.Tags = data;
+					res.send(toSend);
+				});
+			}
+		});
+	else if(req.query.Op ==  'delete')
+		removeTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
+			if(data !== undefined)
+				res.send('{"Status":0, "Error":' + data + '}');
+			else
+			{
+				var toSend = {};
+				toSend.Status = 1;
+				getTags(req.query.ID, function(data) {
+					toSend.Tags = data;
+					res.send(toSend);
+				});
+			}
 		});
 });
 app.get('/Browse/Delete.json',function(req,res){

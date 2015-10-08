@@ -37,3 +37,17 @@ function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue, _c
 		}
 	});
 }
+
+function removeDBInfo(dbCollection, query, _callback)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection(dbCollection);
+			collection.remove(query);
+			
+			_callback("Success");
+		}
+	});
+}

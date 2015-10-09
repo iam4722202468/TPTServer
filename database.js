@@ -31,7 +31,6 @@ function addTag(saveID, tagValue, userKey, callback_)
 		var userID = userKey[0];
 		var userHash = userKey[1];
 		
-		console.log(userKey);
 		IDtoName(userID, function(userName){
 			getSession(userName, function(dataKey) {
 				if(dataKey == userHash)
@@ -71,8 +70,7 @@ function removeTag(saveID, tagValue, userKey, callback_)
 	{
 		var userID = userKey[0];
 		var userHash = userKey[1];
-		
-		console.log(userKey);
+
 		IDtoName(userID, function(userName){
 			getSession(userName, function(dataKey) {
 				if(dataKey == userHash)
@@ -97,8 +95,29 @@ function removeTag(saveID, tagValue, userKey, callback_)
 
 function saveVersion(saveID, version)
 {
-	mkdirp('./static/'+saveID, function(err) { 
-		fs.createReadStream('./static/'+saveID+'.cps').pipe(fs.createWriteStream('./static/'+saveID+'/'+saveID+'_'+version+'.cps'));
+	mkdirp(__dirname + '/static/cps/'+saveID, function(err) { 
+		fs.createReadStream(__dirname + '/static/cps/'+saveID+'.cps').pipe(fs.createWriteStream(__dirname + '/static/cps/'+saveID+'/'+saveID+'_'+version+'.cps'));
+	});
+}
+
+function renderSavePTI(filePath, time, filename, callback_)
+{
+	var renderer = require("child_process").exec(__dirname + "/render/render64 " + filePath.replace(/^.*[\\\/]/, '') + " " + filename)
+	
+	renderer.on('exit', function() {
+		console.log(__dirname + "/render");
+		
+		fs.unlinkSync(__dirname + "/render/" + filename + '.png');
+		fs.unlinkSync(__dirname + "/render/" + filename + '-small.png');
+		fs.rename(__dirname + "/render/" + filename + '.pti', __dirname + "/static/pti/saves/" + filename + '.pti');
+		fs.rename(__dirname + "/render/" + filename + '-small.pti', __dirname + "/static/pti/saves/" + filename + '_small.pti');
+		
+		mkdirp(__dirname + '/static/pti/saves/'+filename, function(err) { 	
+			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + time + '.pti'));
+			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '_small.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + time + '_small.pti'));
+		});
+		
+		callback_();
 	});
 }
 
@@ -447,7 +466,7 @@ function getVote(userID, saveID, callback_)
 	});
 }
 
-function addSave(userID, userKey, saveName, saveDescription, savePublish, callback_)
+function addSave(userID, userKey, saveName, saveDescription, savePublish, time, callback_)
 {
 	IDtoName(userID, function(userName){
 		getSession(userName, function(dataKey) {
@@ -472,8 +491,8 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 									db.collection("Saves", function(error, collection){
 										collection.insert({
 											ID: lastSave,
-											Created: Math.floor(new Date() / 1000),
-											Updated: Math.floor(new Date() / 1000),
+											DateCreated: time,
+											Date: time,
 											Version: 0,
 											Score: 1,
 											ScoreUp: 1,
@@ -498,7 +517,7 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, callba
 									
 									getSaveVersion(newSaveID, function(lastVersion) {
 										collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
-										collection.update({"ID" : newSaveID}, {$set: {'Updated':Math.floor(new Date() / 1000)}});
+										collection.update({"ID" : newSaveID}, {$set: {'Updated':time}});
 										console.log("The last version is " + parseInt(lastVersion+1));
 										callback_({'ID':newSaveID, 'Version':lastVersion+1});
 									});
@@ -561,7 +580,7 @@ function addComment(userID, userKey, comment, saveID, callback_)
 								UserID: userID,
 								Gravatar: "",
 								Text: comment,
-								Timestamp: Math.floor(new Date() / 1000),
+								Timestamp: parseInt(new Date()/1000),
 								FormattedUsername: userName
 							}, function() {
 								console.log("Successfully inserted with Comment " + comment);

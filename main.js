@@ -15,15 +15,19 @@ app.post('/Save.api',function(req,res){
 	var filePath = "";
 	
 	var form = new formidable.IncomingForm({
-		uploadDir: __dirname + '/static' //where you want saves to be uploaded
+		uploadDir: __dirname + '/static/render'
 	});
 	form.parse(req, function(err, fields, file) { //Name: 'moo', Description: '', Publish: 'Private'
-		addSave(userID, userKey, fields.Name, fields.Description, fields.Publish, function(data) {
+		var time = parseInt(new Date() / 1000);
+		addSave(userID, userKey, fields.Name, fields.Description, fields.Publish, time, function(data) {
 			res.send("OK " + data.ID);
 			version = data.Version
 			filename = data.ID + '';
-			fs.rename(filePath, form.uploadDir + "/" + filename + '.cps');
-			saveVersion(filename, version);
+			
+			renderSavePTI(filePath, time, filename, function() {
+				fs.rename(filePath, __dirname + "/cps/" + filename + '.cps');
+				saveVersion(filename, version);
+			});
 		});
 	});
 	
@@ -203,7 +207,16 @@ app.post('/Login.json',function(req,res){
 	console.log('login');
 });
 
+app.use(function (req, res) {
+	if(req.originalUrl.substr(req.originalUrl.lastIndexOf('.')) == '.pti')
+	{
+		res.sendFile(__dirname + '/static/pti/saves' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.pti');
+	} else {
+		res.sendFile(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
+		console.log(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
+	}
+});
+
 http.listen(3000, function(){
 	console.log('listening on *:3000');
-	app.use(express.static(__dirname + '/static'));
 });

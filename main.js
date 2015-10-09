@@ -15,7 +15,7 @@ app.post('/Save.api',function(req,res){
 	var filePath = "";
 	
 	var form = new formidable.IncomingForm({
-		uploadDir: __dirname + '/static/render'
+		uploadDir: __dirname + '/render'
 	});
 	form.parse(req, function(err, fields, file) { //Name: 'moo', Description: '', Publish: 'Private'
 		var time = parseInt(new Date() / 1000);
@@ -24,8 +24,10 @@ app.post('/Save.api',function(req,res){
 			version = data.Version
 			filename = data.ID + '';
 			
+			console.log(filename);
+			
 			renderSavePTI(filePath, time, filename, function() {
-				fs.rename(filePath, __dirname + "/cps/" + filename + '.cps');
+				fs.rename(filePath, __dirname + "/static/cps/" + filename + '.cps');
 				saveVersion(filename, version);
 			});
 		});
@@ -219,4 +221,5 @@ app.use(function (req, res) {
 
 http.listen(3000, function(){
 	console.log('listening on *:3000');
+	process.chdir(__dirname + "/render");
 });

@@ -105,8 +105,6 @@ function renderSavePTI(filePath, time, filename, callback_)
 	var renderer = require("child_process").exec(__dirname + "/render/render64 " + filePath.replace(/^.*[\\\/]/, '') + " " + filename)
 	
 	renderer.on('exit', function() {
-		console.log(__dirname + "/render");
-		
 		fs.unlinkSync(__dirname + "/render/" + filename + '.png');
 		fs.unlinkSync(__dirname + "/render/" + filename + '-small.png');
 		fs.rename(__dirname + "/render/" + filename + '.pti', __dirname + "/static/pti/saves/" + filename + '.pti');
@@ -414,34 +412,39 @@ function saveVote(userID, userKey, saveID, voteDirection, callback_)
 {
 	IDtoName(userID, function(userName) {
 		getSession(userName, function(dataKey) {
-			getVote(userID, saveID, function(userVote) {
-				if(userVote == 0)
-				{
-					MongoClient.connect(url, function (err, db) {
-						if (err) {
-							console.log('Unable to connect to the mongoDB server. Error:', err);
-						} else {
-							if(voteDirection == "Up")
-								var voteInt = 1;
-							else
-								var voteInt = -1;
-							db.collection("Votes", function(error, collection) {
-								collection.insert({
-									SaveID: parseInt(saveID),
-									UserID: parseInt(userID),
-									Vote: voteInt
-								}, function() {
-									console.log(userName + " successfully voted on save " + saveID);
-									db.close();
-									callback_("Success");
+			if(dataKey == userKey)
+			{
+				getVote(userID, saveID, function(userVote) {
+					if(userVote == 0)
+					{
+						MongoClient.connect(url, function (err, db) {
+							if (err) {
+								console.log('Unable to connect to the mongoDB server. Error:', err);
+							} else {
+								if(voteDirection == "Up")
+									var voteInt = 1;
+								else
+									var voteInt = -1;
+								db.collection("Votes", function(error, collection) {
+									collection.insert({
+										SaveID: parseInt(saveID),
+										UserID: parseInt(userID),
+										Vote: voteInt
+									}, function() {
+										console.log(userName + " successfully voted on save " + saveID);
+										db.close();
+										callback_("Success");
+									});
 								});
-							});
-						}
-					});
-				} else {
-					callback_('You already voted');
-				}
-			});
+							}
+						});
+					} else {
+						callback_('You already voted');
+					}
+				});
+			} else {
+				callback_("Invalid Login");
+			}
 		});
 	});
 }
@@ -463,6 +466,34 @@ function getVote(userID, saveID, callback_)
 					callback_(docs[0].Vote)
 			});
 		}
+	});
+}
+
+function reportSave(userID, userKey, reason, saveID, callback_)
+{
+	IDtoName(userID, function(userName) {
+		getSession(userName, function(dataKey) {
+			if(dataKey == userKey)
+			{
+				fs.stat(__dirname + '/Reports/' + userID, function(err, stat) {
+					if(err == null) {
+						fs.appendFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n', function (err) {
+							if(err)
+								console.log(err);
+							callback_();
+						});
+					} else if(err.code == 'ENOENT') {
+						fs.writeFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n');
+						callback_();
+					} else {
+						console.log('Some other error: ', err.code);
+						callback_();
+					}
+				});
+			} else {
+				callback_("Invalid Login");
+			}
+		});
 	});
 }
 
@@ -518,6 +549,8 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, time, 
 									getSaveVersion(newSaveID, function(lastVersion) {
 										collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
 										collection.update({"ID" : newSaveID}, {$set: {'Updated':time}});
+										collection.update({"ID" : newSaveID}, {$set: {'Description':saveDescription}});
+										collection.update({"ID" : newSaveID}, {$set: {'Published':savePublish}});
 										console.log("The last version is " + parseInt(lastVersion+1));
 										callback_({'ID':newSaveID, 'Version':lastVersion+1});
 									});

@@ -66,7 +66,7 @@ function addTag(saveID, tagValue, userKey, callback_)
 	}
 }
 
-function removeTag(saveID, tagValue, userKey, callback_)
+function removeTag(saveID, tagValue, userKey, callback_) //need to check to make sure tag being deleted is on owner's save
 {
 	var userKey = userKey.split('|');
 	

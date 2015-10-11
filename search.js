@@ -49,6 +49,40 @@ function buildFavouriteSearch(userID, start, saveCount, query, callback_)
 	});
 }
 
+function buildBy(userName, start, saveCount, callback_)
+{
+	var returnJSON = {};
+	returnJSON.Saves = [];
+	
+	var query = {};
+	query['Username'] = userName;
+	
+	getDBInfo('Saves', query, function(data) {
+		
+		data = sortByKeyInverse(data, 'Score');
+		
+		if(data.length == 0)
+		{
+			returnJSON.Count = 0;
+			callback_(returnJSON);
+		}
+		
+		returnJSON.Count = data.length;
+		for(var i = start; i < data.length; i++)
+		{
+			data[i].Version = 0;
+			delete data[i]['_id'];
+			returnJSON.Saves.push(data[i]);
+			
+			if(i == start+saveCount || i == data.length-1)
+			{
+				callback_(returnJSON);
+				break;
+			}
+		}
+	});
+}
+
 function buildFavourite(userID, start, saveCount, callback_)
 {
 	var returnJSON = {};
@@ -57,8 +91,6 @@ function buildFavourite(userID, start, saveCount, callback_)
 	var query = {};
 	query['UserID'] = parseInt(userID);
 	
-	console.log(query);
-	
 	getDBInfo('Favourite', query, function(data) {
 		if(data.length == 0)
 		{
@@ -66,21 +98,17 @@ function buildFavourite(userID, start, saveCount, callback_)
 			callback_(returnJSON);
 		}
 		
-		if(saveCount > data.length)
-			returnJSON.Count = data.length;
-		else
-			returnJSON.Count = saveCount;
+		returnJSON.Count = data.length;
 		
-		for(var i in data)
-		{
-			getSaveInfo(data[i].SaveID, function(saveData) {
+		data.slice(start).forEach(function (d, i) {
+			getSaveInfo(data[i+parseInt(start)].SaveID, function(saveData) {
 				saveData.Version = 0;
 				returnJSON.Saves.push(saveData);
 				
-				if(i == saveCount-1 || i == returnJSON.Saves.length-1)
+				if(i == saveCount || i == data.length - 1 - start)
 					callback_(returnJSON);
 			});
-		}
+		});
 	});
 }
 
@@ -97,23 +125,17 @@ function buildSecondPage(start, saveCount, callback_)
 	getDBInfo('Saves', query, function(data) {
 		returnJSON.Saves = sortByKeyInverse(data, 'Score');
 		
-		if(saveCount > returnJSON.Saves.length)
-			returnJSON.Count = returnJSON.Saves.length;
-		else
-			returnJSON.Count = start + saveCount;
+		returnJSON.Count = returnJSON.Saves.length;
 		
 		for(var i = start; i < returnJSON.Saves.length; i++)
 		{
-			if(i <= saveCount || i <= returnJSON.Saves.length)
-			{
-				returnJSON.Saves[i].Version = 0;
-				delete returnJSON.Saves[i]['_id'];
+			returnJSON.Saves[i].Version = 0;
+			delete returnJSON.Saves[i]['_id'];
 				
-				if(i == saveCount-1 || i == returnJSON.Saves.length-1)
-				{
-					callback_(returnJSON);
-					break; 
-				}
+			if(i == start+saveCount || i == returnJSON.Saves.length-1)
+			{
+				callback_(returnJSON);
+				break; 
 			}
 		}
 	});

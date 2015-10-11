@@ -33,7 +33,7 @@ db
 		Text <string>
 		Timestamp <int>
 		FormattedUsername <string>
-	Version //do last
+	Version
 		Stable
 			Major <string>
 			Minor <string>

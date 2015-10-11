@@ -125,7 +125,7 @@ app.get('/Browse.json', function(req,res) {
 			if(req.query.Category == "Favourites")
 			{
 				console.log('Searching by Favourite');
-				buildFavouriteSearch(userID, req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
+				buildFavouriteSearch(userID, userKey, req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
 					res.send(data);
 				});
 			}
@@ -143,7 +143,7 @@ app.get('/Browse.json', function(req,res) {
 		{
 			console.log("Favourite");
 			
-			buildFavourite(userID, req.query.Start, req.query.Count, function(data) {
+			buildFavourite(userID, userKey, req.query.Start, req.query.Count, function(data) {
 				res.send(data);
 			});
 		}
@@ -151,7 +151,7 @@ app.get('/Browse.json', function(req,res) {
 		{
 			console.log('Category');
 			if(req.query.Category.substr(0,3) == 'by:')
-				buildBy(req.query.Category.substr(3), req.query.Start, req.query.Count, function(data) {
+				buildByOwn(userID, userKey, req.query.Start, req.query.Count, function(data) {
 					res.send(data);
 				});
 			else

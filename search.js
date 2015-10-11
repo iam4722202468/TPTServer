@@ -11,11 +11,11 @@ function sortByKeyInverse(array, key) {
     });
 }
 
-function buildFavouriteSearch(userID, start, saveCount, query, callback_)
+function buildFavouriteSearch(userID, userKey, start, saveCount, query, callback_)
 {
 	var searchable = ['ID', 'DateCreated', 'Date', 'Version', 'Score', 'ScoreUp', 'ScoreDown', 'Views', 'Name', 'ShortName', 'Username', 'Published'];
 	
-	buildFavourite(userID, start, saveCount, function(data) {
+	buildFavourite(userID, userKey, start, saveCount, function(data) {
 		
 		var returnJSON = data;
 		
@@ -49,65 +49,83 @@ function buildFavouriteSearch(userID, start, saveCount, query, callback_)
 	});
 }
 
-function buildBy(userName, start, saveCount, callback_)
+function buildByOwn(userID, userKey, start, saveCount, callback_)
 {
-	var returnJSON = {};
-	returnJSON.Saves = [];
-	
-	var query = {};
-	query['Username'] = userName;
-	
-	getDBInfo('Saves', query, function(data) {
-		
-		data = sortByKeyInverse(data, 'Score');
-		
-		if(data.length == 0)
-		{
-			returnJSON.Count = 0;
-			callback_(returnJSON);
-		}
-		
-		returnJSON.Count = data.length;
-		for(var i = start; i < data.length; i++)
-		{
-			data[i].Version = 0;
-			delete data[i]['_id'];
-			returnJSON.Saves.push(data[i]);
-			
-			if(i == start+saveCount || i == data.length-1)
+	IDtoName(userID, function(userName){
+		getSession(userName, function(dataKey) {
+			if(dataKey == userKey)
 			{
-				callback_(returnJSON);
-				break;
+				var returnJSON = {};
+				returnJSON.Saves = [];
+				
+				var query = {};
+				query['Username'] = userName;
+				
+				getDBInfo('Saves', query, function(data) {
+					
+					data = sortByKeyInverse(data, 'Score');
+					
+					if(data.length == 0)
+					{
+						returnJSON.Count = 0;
+						callback_(returnJSON);
+					}
+					
+					returnJSON.Count = data.length;
+					for(var i = start; i < data.length; i++)
+					{
+						data[i].Version = 0;
+						delete data[i]['_id'];
+						returnJSON.Saves.push(data[i]);
+						
+						if(i == start+saveCount || i == data.length-1)
+						{
+							callback_(returnJSON);
+							break;
+						}
+					}
+				});
+			} else {
+				callback_("Invalid Login");
 			}
-		}
+		});
 	});
 }
 
-function buildFavourite(userID, start, saveCount, callback_)
+function buildFavourite(userID, userKey, start, saveCount, callback_)
 {
-	var returnJSON = {};
-	returnJSON.Saves = [];
-	
-	var query = {};
-	query['UserID'] = parseInt(userID);
-	
-	getDBInfo('Favourite', query, function(data) {
-		if(data.length == 0)
-		{
-			returnJSON.Count = 0;
-			callback_(returnJSON);
-		}
-		
-		returnJSON.Count = data.length;
-		
-		data.slice(start).forEach(function (d, i) {
-			getSaveInfo(data[i+parseInt(start)].SaveID, function(saveData) {
-				saveData.Version = 0;
-				returnJSON.Saves.push(saveData);
+	IDtoName(userID, function(userName){
+		getSession(userName, function(dataKey) {
+			if(dataKey == userKey)
+			{
+				var returnJSON = {};
+				returnJSON.Saves = [];
 				
-				if(i == saveCount || i == data.length - 1 - start)
-					callback_(returnJSON);
-			});
+				var query = {};
+				query['UserID'] = parseInt(userID);
+				
+				getDBInfo('Favourite', query, function(data) {
+					if(data.length == 0)
+					{
+						returnJSON.Count = 0;
+						callback_(returnJSON);
+					}
+					
+					returnJSON.Count = data.length;
+					
+					data.slice(start).forEach(function (d, i) {
+						getSaveInfo(data[i+parseInt(start)].SaveID, function(saveData) {
+							saveData.Version = 0;
+							returnJSON.Saves.push(saveData);
+							
+							if(i == saveCount || i == data.length+start-1)
+								callback_(returnJSON);
+						});
+					});
+				});	
+			} else {
+				callback_('Invalid Login');
+			}
 		});
 	});
 }

@@ -66,7 +66,7 @@ function addTag(saveID, tagValue, userKey, callback_)
 	}
 }
 
-function removeTag(saveID, tagValue, userKey, callback_) //need to check to make sure tag being deleted is on owner's save
+function removeTag(saveID, tagValue, userKey, callback_)
 {
 	var userKey = userKey.split('|');
 	
@@ -84,9 +84,16 @@ function removeTag(saveID, tagValue, userKey, callback_) //need to check to make
 							console.log('Unable to connect to the mongoDB server. Error:', err);
 						} else {
 							var collection = db.collection('Tags');
-							collection.remove({$and:[{'SaveID':parseInt(saveID)},{'Tag':tagValue}]});
-							db.close();
-							callback_();
+							getSaveInfo(saveID, function(saveData) {
+								if(saveData.Username == userName)
+								{
+									collection.remove({$and:[{'SaveID':parseInt(saveID)},{'Tag':tagValue}]});
+									db.close();
+									callback_();
+								} else {
+									callback_("That save is not owned by you");
+								}
+							});
 						}
 					});
 				} else {

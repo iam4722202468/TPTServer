@@ -9,13 +9,12 @@ db
 		Website <string>
 		Hash <string>
 	Favourite
-		UserID
-		Saves
-			ID's
+		UserID <int>
+		SaveID <int>
 	Saves
 		ID <int>
-		Created <int>
-		Updated <int>
+		DateCreated <int>
+		Date <int>
 		Version <int>
 		Score <int>
 		ScoreUp <int>

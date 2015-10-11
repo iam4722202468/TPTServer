@@ -11,6 +11,10 @@ function getTags(saveID, callback_)
 	
 	getDBInfo('Tags', query, function(data) {
 		var returnArray = [];
+		if(data.length <= 0)
+		{
+			callback_(returnArray);
+		}
 		for(x in data)
 		{
 			returnArray.push(data[x].Tag);
@@ -119,7 +123,7 @@ function renderSavePTI(filePath, time, filename, callback_)
 	});
 }
 
-function getSaveInfo(saveID, _callback)
+function getSaveInfo(saveID, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -135,17 +139,15 @@ function getSaveInfo(saveID, _callback)
 				{
 					if(data[0].Views === undefined)
 					{
-						changeDBInfo('Saves', 'ID', saveID, 'Views', 1, function(returnval)
-						{
-							console.log(returnval);
-						});
+						changeDBInfo('Saves', 'ID', saveID, 'Views', 1);
 					}
 					else
 					{
-						changeDBInfo('Saves', 'ID', saveID, 'Views', parseInt(data[0].Views+1), function(returnval) {
-							console.log(returnval);
-						});
+						changeDBInfo('Saves', 'ID', saveID, 'Views', parseInt(data[0].Views+1));
 					}
+				} else {
+					db.close();
+					callback_(-1);
 				}
 				
 				var name = 'SaveID';
@@ -166,12 +168,13 @@ function getSaveInfo(saveID, _callback)
 							
 							getTags(saveID, function(data3) {
 								data[0].Tags = data3;
-								_callback(data[0]);
+								callback_(data[0]);
 							});
 						});
 						
 					} else {
-						_callback(-1);
+						db.close();
+						callback_(-1);
 					}
 					db.close();
 				});
@@ -207,7 +210,7 @@ function checkTotalVotes(saveID, callback_)
 	});
 }
 
-function checkUser(userName, userHash, _callback)
+function checkUser(userName, userHash, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -216,9 +219,9 @@ function checkUser(userName, userHash, _callback)
 			var collection = db.collection('User');
 			collection.find({"Hash":userHash}).toArray(function(err, docs){
 				if(docs.length > 0 && docs[0].Name == userName)
-					_callback(true);
+					callback_(true);
 				else
-					_callback(false);
+					callback_(false);
 
 				db.close();
 			});
@@ -269,7 +272,7 @@ function checkLastSaveID(callback_)
 	});
 }
 
-function getUser(userName, _callback)
+function getUser(userName, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -290,10 +293,10 @@ function getUser(userName, _callback)
 						}
 					}
 					
-					_callback(JSON.stringify(toReturn));
+					callback_(JSON.stringify(toReturn));
 				}
 				else
-					_callback('{"User":{"Username":"NULL","ID":0}}');
+					callback_('{"User":{"Username":"NULL","ID":0}}');
 
 				db.close();
 			});
@@ -432,8 +435,16 @@ function saveVote(userID, userKey, saveID, voteDirection, callback_)
 										Vote: voteInt
 									}, function() {
 										console.log(userName + " successfully voted on save " + saveID);
-										db.close();
-										callback_("Success");
+										db.collection("Saves", function(error, saveCollection) {
+											if(voteInt == 1)
+												saveCollection.update({"ID":parseInt(saveID)}, {$inc: {"ScoreUp":1}});
+											else
+												saveCollection.update({"ID":parseInt(saveID)}, {$inc: {"ScoreDown":1}});
+											
+											saveCollection.update({"ID":parseInt(saveID)}, {$inc: {"Score":voteInt}});
+											db.close();
+											callback_("Success");
+										});
 									});
 								});
 							}
@@ -467,6 +478,97 @@ function getVote(userID, saveID, callback_)
 			});
 		}
 	});
+}
+
+function getFavourite(userID, saveID, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Favourite');
+			
+			collection.find({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]}).toArray(function(err, docs){
+				db.close();
+				
+				if(docs.length < 1)
+					callback_(false);
+				else
+					callback_(true)
+			});
+		}
+	});
+}
+
+function addFavourite(saveID, userKey, callback_)
+{
+	var userKey = userKey.split('|');
+	
+	if(userKey.length > 1)
+	{
+		var userID = userKey[0];
+		var userHash = userKey[1];
+		
+		IDtoName(userID, function(userName){
+			getSession(userName, function(dataKey) {
+				if(dataKey == userHash)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+							db.collection("Favourite", function(error, collection) {
+								collection.remove({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]});
+								
+								collection.insert({
+									SaveID: parseInt(saveID),
+									UserID: parseInt(userID)
+								}, function() {
+									console.log(userID + " successfully favorited to save " + saveID);
+									db.close();
+									callback_();
+								});
+							});
+						}
+					});
+				} else {
+					callback_("Invalid Login");
+				}
+			});
+		});
+	}
+}
+
+function removeFavourite(saveID, userKey, callback_)
+{
+	var userKey = userKey.split('|');
+	
+	if(userKey.length > 1)
+	{
+		var userID = userKey[0];
+		var userHash = userKey[1];
+		
+		IDtoName(userID, function(userName){
+			getSession(userName, function(dataKey) {
+				if(dataKey == userHash)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+							var collection = db.collection('Favourite');
+							collection.remove({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]});
+							console.log(userID + " successfully removed favorite from save " + saveID);
+							db.close();
+							callback_();
+						}
+					});
+				} else {
+					callback_("Invalid Login");
+				}
+			});
+		});
+	}
 }
 
 function reportSave(userID, userKey, reason, saveID, callback_)
@@ -525,8 +627,8 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, time, 
 											DateCreated: time,
 											Date: time,
 											Version: 0,
-											Score: 1,
-											ScoreUp: 1,
+											Score: 0,
+											ScoreUp: 0,
 											ScoreDown: 0,
 											Name: saveName,
 											ShortName: saveName,

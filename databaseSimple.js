@@ -14,7 +14,7 @@ function getDBInfo(dbCollection, query, _callback)
 	});
 }
 
-function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue, _callback)
+function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -33,7 +33,7 @@ function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue, _c
 			change[newname] = newvalue;
 			
 			collection.update(query, {$set: change});
-			_callback("Success");
+			return 0;
 		}
 	});
 }

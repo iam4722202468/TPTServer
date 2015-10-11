@@ -145,13 +145,9 @@ function getSaveInfo(saveID, callback_)
 				if(data.length > 0)
 				{
 					if(data[0].Views === undefined)
-					{
 						changeDBInfo('Saves', 'ID', saveID, 'Views', 1);
-					}
 					else
-					{
 						changeDBInfo('Saves', 'ID', saveID, 'Views', parseInt(data[0].Views+1));
-					}
 				} else {
 					db.close();
 					callback_(-1);
@@ -168,17 +164,11 @@ function getSaveInfo(saveID, callback_)
 						delete data[0]._id;
 						data[0].Comments = data2.length;
 						
-						checkTotalVotes(saveID, function(voteData) {
-							data[0].Score = voteData.Up - voteData.Down;
-							data[0].ScoreUp = voteData.Up;
-							data[0].ScoreDown = voteData.Down;
-							
-							getTags(saveID, function(data3) {
-								data[0].Tags = data3;
-								callback_(data[0]);
-							});
+						getTags(saveID, function(data3) {
+							data[0].Tags = data3;
+							db.close();
+							callback_(data[0]);
 						});
-						
 					} else {
 						db.close();
 						callback_(-1);
@@ -186,33 +176,6 @@ function getSaveInfo(saveID, callback_)
 					db.close();
 				});
 			});
-		}
-	});
-}
-
-function checkTotalVotes(saveID, callback_)
-{
-	var name = 'SaveID';
-	var value = saveID;
-	var query = {};
-	query[name] = parseInt(value);
-	var totalVotesUp = 0;
-	var totalVotesDown = 0;
-	
-	getDBInfo('Votes', query, function(voteArray) {
-		for(var x in voteArray)
-		{
-			if(voteArray[x].Vote == 1)
-				totalVotesUp += 1;
-			else if(voteArray[x].Vote == -1)
-				totalVotesDown += 1;
-			
-			if(x == voteArray.length-1)
-				callback_({'Up':totalVotesUp, 'Down':totalVotesDown});
-		}
-		if(voteArray.length == 0)
-		{
-			callback_({'Up':totalVotesUp, 'Down':totalVotesDown});
 		}
 	});
 }

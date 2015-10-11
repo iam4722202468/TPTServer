@@ -33,6 +33,8 @@ function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue)
 			change[newname] = newvalue;
 			
 			collection.update(query, {$set: change});
+			
+			db.close();
 			return 0;
 		}
 	});

@@ -11,41 +11,46 @@ function sortByKeyInverse(array, key) {
     });
 }
 
-function buildFavouriteSearch(userID, userKey, start, saveCount, query, callback_)
+function buildSortSaves(saveArray, query, callback_)
 {
 	var searchable = ['ID', 'DateCreated', 'Date', 'Version', 'Score', 'ScoreUp', 'ScoreDown', 'Views', 'Name', 'ShortName', 'Username', 'Published'];
 	
-	buildFavourite(userID, userKey, start, saveCount, function(data) {
-		
-		var returnJSON = data;
-		
-		if(query.substr(0, 5) == 'sort:')
+	if(query.substr(0, 5) == 'sort:')
+	{
+		if(query.substr(5, 1) == '!')
 		{
-			if(query.substr(5, 1) == '!')
+			var sortType = 'invert';
+			var searchString = query.substr(6);
+		}
+		else
+		{
+			var sortType = 'normal';
+			var searchString = query.substr(5);
+		}
+		
+		for(var searchPlace in searchable)
+		{
+			if(searchable[searchPlace].toLowerCase() == searchString.toLowerCase())
 			{
-				var sortType = 'invert';
-				var searchString = query.substr(6);
-			}
-			else
-			{
-				var sortType = 'normal';
-				var searchString = query.substr(5);
-			}
-			
-			for(var searchPlace in searchable)
-			{
-				if(searchable[searchPlace].toLowerCase() == searchString.toLowerCase())
-				{
-					if(sortType == 'invert')
-						returnJSON.Saves = sortByKeyInverse(returnJSON.Saves, searchable[searchPlace]);
-					else
-						returnJSON.Saves = sortByKey(returnJSON.Saves, searchable[searchPlace]);
-						
-					callback_(returnJSON);
-					break;
-				}
+				if(sortType == 'invert')
+					saveArray = sortByKeyInverse(saveArray, searchable[searchPlace]);
+				else
+					saveArray = sortByKey(saveArray, searchable[searchPlace]);
+					
+				callback_(saveArray);
+				break;
 			}
 		}
+	}
+}
+
+function buildFavouriteSearch(userID, userKey, start, saveCount, query, callback_)
+{
+	buildFavourite(userID, userKey, start, saveCount, function(data) {
+		buildSortSaves(data.Saves, query, function(arrangedSaves) {
+			data.Saves = arrangedSaves;
+			callback_(data);
+		});
 	});
 }
 
@@ -113,10 +118,13 @@ function buildFavourite(userID, userKey, start, saveCount, callback_)
 					
 					returnJSON.Count = data.length;
 					
-					data.slice(start).forEach(function (d, i) {
-						getSaveInfo(data[i+parseInt(start)].SaveID, function(saveData) {
-							saveData.Version = 0;
-							returnJSON.Saves.push(saveData);
+					data.slice(start).forEach(function (d, i) { //should be rewritten before release
+						var saveQuery = {};
+						saveQuery['ID'] = data[i+parseInt(start)].SaveID;
+						
+						getDBInfo('Saves', saveQuery, function(saveData) {
+							saveData[0].Version = 0;
+							returnJSON.Saves.push(saveData[0]);
 							
 							if(i == saveCount || i == data.length+start-1)
 								callback_(returnJSON);

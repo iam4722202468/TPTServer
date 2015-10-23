@@ -135,9 +135,13 @@ app.get('/Browse.json', function(req,res) {
 				res.send('{"Count":1,"Saves":[{"ID":2,"Created":1442514001,"Updated":1442514001,"Version":0,"Score":17,"ScoreUp":18,"ScoreDown":1,"Name":"Ping Pong Game","ShortName":"Ping Pong Game","Username":"the-good-side","Comments":8,"Published":false}]}');
 			}
 		} else {
-			console.log('Searching');
-			res.send('{"Count":1,"Saves":[{"ID":2,"Created":1442514001,"Updated":1442514001,"Version":0,"Score":17,"ScoreUp":18,"ScoreDown":1,"Name":"Ping Pong Game","ShortName":"Ping Pong Game","Username":"the-good-side","Comments":8,"Published":false}]}');
+			console.log("Searching");
+			
+			buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
+				res.send(data);
+			});
 		}
+		
 	} else if(req.query.Category !== undefined) {
 		if(req.query.Category == "Favourites")
 		{
@@ -161,14 +165,14 @@ app.get('/Browse.json', function(req,res) {
 		if(req.query.Start == '0')
 		{
 			console.log("Building FP");
-			buildSecondPage(req.query.Start, req.query.Count, function(data) {
+			buildBySort('Score', req.query.Start, req.query.Count, function(data) {
 				res.send(data);
 			});
 		}
 		else
 		{
 			console.log("Building Most Votes");
-			buildSecondPage(req.query.Start, req.query.Count, function(data) {
+			buildBySort('Score', req.query.Start, req.query.Count, function(data) {
 				res.send(data);
 			});
 		}
@@ -247,9 +251,18 @@ app.get('/Browse/EditTag.json', function(req,res) {
 		});
 });
 app.get('/Browse/Delete.json', function(req,res) {
-  console.log(req.query);
-  console.log('/Browse/Delete.json');
-  res.end();
+	console.log('/Browse/Delete.json');
+	console.log(req.query.Mode);
+	if(req.query.Mode == 'Unpublish')
+	{
+		
+	}
+	else if(req.query.Mode == 'Delete')
+	{
+		
+	}
+	
+	res.send('{"Status":1}');
 });
 
 app.get('/Startup.json', function(req,res) {

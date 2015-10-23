@@ -40,6 +40,10 @@ function buildSortSaves(saveArray, query, callback_)
 				callback_(saveArray);
 				break;
 			}
+			if(searchPlace == searchable.length-1)
+			{
+				callback_(['']);
+			}
 		}
 	}
 }
@@ -118,15 +122,19 @@ function buildFavourite(userID, userKey, start, saveCount, callback_)
 					
 					returnJSON.Count = data.length;
 					
-					data.slice(start).forEach(function (d, i) { //should be rewritten before release
+					if(data.length - parseInt(saveCount) - parseInt(start) < 0)
+						saveCount = data.length%20;
+					
+					data.slice(start, start+saveCount).forEach(function (d, i) { //should be rewritten before release 
+						//db.Saves.find({$or:[{ID:3}, {ID:4}]})
 						var saveQuery = {};
-						saveQuery['ID'] = data[i+parseInt(start)].SaveID;
+						saveQuery['ID'] = d.SaveID;
 						
 						getDBInfo('Saves', saveQuery, function(saveData) {
 							saveData[0].Version = 0;
 							returnJSON.Saves.push(saveData[0]);
 							
-							if(i == saveCount || i == data.length+start-1)
+							if(i == saveCount-1 || i == data.length+start-1)
 								callback_(returnJSON);
 						});
 					});
@@ -138,31 +146,73 @@ function buildFavourite(userID, userKey, start, saveCount, callback_)
 	});
 }
 
-function buildSecondPage(start, saveCount, callback_)
+function getSaves(callback_)
 {
 	var returnJSON = {};
-	
-	if(start > 0)
-		start = start - 20;
 	
 	var query = {};
 	query['Published'] = true;
 	
 	getDBInfo('Saves', query, function(data) {
-		returnJSON.Saves = sortByKeyInverse(data, 'Score');
+		callback_(data);
+	});
+}
+
+function sliceSaves(returnJSON, start, saveCount, callback_)
+{
+	returnJSON.Count = returnJSON.Saves.length;
+	originalSaves = returnJSON.Saves;
+	returnJSON.Saves = [];
+	
+	if(returnJSON.Count - parseInt(saveCount) - parseInt(start) < 0)
+		saveCount = returnJSON.Count%20;
+	
+	originalSaves.slice(start, start+saveCount).forEach(function (d, i) {
+		d.Version = 0;
+		delete d['_id'];
+		returnJSON.Saves.push(d);
 		
-		returnJSON.Count = returnJSON.Saves.length;
-		
-		for(var i = start; i < returnJSON.Saves.length; i++)
+		if(i == parseInt(saveCount)-1 || i == parseInt(returnJSON.Count)+parseInt(start)-1)
+			callback_(returnJSON);
+	});
+}
+
+function buildByAllSearch(start, saveCount, query, callback_)
+{
+	var returnJSON = {};
+	
+	//write function to search saves and tags for query
+		//this can be used while there's nothing written
+	
+	getSaves(function(data) {
+		if(query.split(" ")[query.split(" ").length-1].split(":")[0] == "sort" && query.split(" ")[query.split(" ").length-1].split(":").length == 2)
 		{
-			returnJSON.Saves[i].Version = 0;
-			delete returnJSON.Saves[i]['_id'];
-				
-			if(i == start+saveCount || i == returnJSON.Saves.length-1)
-			{
-				callback_(returnJSON);
-				break; 
-			}
+			
+			console.log('sorting', query.split(" ")[query.split(" ").length-1]);
+			
+			buildSortSaves(data, query.split(" ")[query.split(" ").length-1], function(sortedSaves) {
+				sliceSaves(sortedSaves, start, saveCount, function(sendData) {
+					callback_(sendData);
+				});
+			});
+			
+		} else {
+			returnJSON.Saves = data;
+			sliceSaves(returnJSON, start, saveCount, function(sendData) {
+				callback_(sendData);
+			});
 		}
+	});
+}
+
+function buildBySort(sortBy, start, saveCount, callback_)
+{
+	var returnJSON = {};
+	
+	getSaves(function(data) {
+		returnJSON.Saves = sortByKeyInverse(data, sortBy);
+		sliceSaves(returnJSON, start, saveCount, function(sendData) {
+			callback_(sendData);
+		});
 	});
 }

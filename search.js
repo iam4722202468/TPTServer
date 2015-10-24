@@ -13,6 +13,7 @@ function sortByKeyInverse(array, key) {
 
 function buildSortSaves(saveArray, query, callback_)
 {
+	console.log(query);
 	var searchable = ['ID', 'DateCreated', 'Date', 'Version', 'Score', 'ScoreUp', 'ScoreDown', 'Views', 'Name', 'ShortName', 'Username', 'Published'];
 	
 	if(query.substr(0, 5) == 'sort:')
@@ -45,6 +46,8 @@ function buildSortSaves(saveArray, query, callback_)
 				callback_(['']);
 			}
 		}
+	} else {
+		callback_(['']);
 	}
 }
 
@@ -160,6 +163,8 @@ function getSaves(callback_)
 
 function sliceSaves(returnJSON, start, saveCount, callback_)
 {
+	console.log(returnJSON, start,saveCount);
+	
 	returnJSON.Count = returnJSON.Saves.length;
 	originalSaves = returnJSON.Saves;
 	returnJSON.Saves = [];
@@ -185,15 +190,18 @@ function buildByAllSearch(start, saveCount, query, callback_)
 		//this can be used while there's nothing written
 	
 	getSaves(function(data) {
-		if(query.split(" ")[query.split(" ").length-1].split(":")[0] == "sort" && query.split(" ")[query.split(" ").length-1].split(":").length == 2)
+		if(query.split(" ")[query.split(" ").length-1].split(":")[0] == "sort" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != "")
 		{
-			
-			console.log('sorting', query.split(" ")[query.split(" ").length-1]);
-			
 			buildSortSaves(data, query.split(" ")[query.split(" ").length-1], function(sortedSaves) {
-				sliceSaves(sortedSaves, start, saveCount, function(sendData) {
-					callback_(sendData);
-				});
+				console.log();
+				if(sortedSaves.length > 0)
+				{
+					sliceSaves({Saves:sortedSaves}, start, saveCount, function(sendData) {
+						callback_(sendData);
+					});
+				}
+				else
+					callback_();
 			});
 			
 		} else {

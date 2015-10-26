@@ -163,8 +163,6 @@ function getSaves(callback_)
 
 function sliceSaves(returnJSON, start, saveCount, callback_)
 {
-	console.log(returnJSON, start,saveCount);
-	
 	returnJSON.Count = returnJSON.Saves.length;
 	originalSaves = returnJSON.Saves;
 	returnJSON.Saves = [];

@@ -39,20 +39,28 @@ function addTag(saveID, tagValue, userKey, callback_)
 			getSession(userName, function(dataKey) {
 				if(dataKey == userHash)
 				{
-					MongoClient.connect(url, function (err, db) {
-						if (err) {
-							console.log('Unable to connect to the mongoDB server. Error:', err);
-						} else {
-							db.collection("Tags", function(error, collection) {
-								collection.insert({
-									SaveID: parseInt(saveID),
-									UserID: parseInt(userID),
-									Tag: tagValue
-								}, function() {
-									console.log(userName + " successfully added tag to save " + saveID);
-									db.close();
-									callback_();
-								});
+					getTags(saveID, function(saveTags) {
+						console.log(saveTags.toString());
+						if(saveTags.indexOf(tagValue) > -1)
+							callback_('Tag already exists');
+						else
+						{
+							MongoClient.connect(url, function (err, db) {
+								if (err) {
+									console.log('Unable to connect to the mongoDB server. Error:', err);
+								} else {
+									db.collection("Tags", function(error, collection) {
+										collection.insert({
+											SaveID: parseInt(saveID),
+											UserID: parseInt(userID),
+											Tag: tagValue
+										}, function() {
+											console.log(userName + " successfully added tag to save " + saveID);
+											db.close();
+											callback_();
+										});
+									});
+								}
 							});
 						}
 					});

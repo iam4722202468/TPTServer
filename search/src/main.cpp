@@ -3,6 +3,7 @@
 #include <fstream>
 #include <streambuf>
 
+#include <math.h>
 #include <algorithm> 
 
 #include <range/v3/algorithm.hpp>
@@ -14,19 +15,20 @@ using namespace ranges;
 
 //not written by me
 template <std::size_t N>
+
 struct get_n {
-  template <typename T>
-  auto operator()(T&& t) const ->
-    decltype(std::get<N>(std::forward<T>(t))) {
-      return std::get<N>(std::forward<T>(t));
-  }
+	template <typename T>
+	auto operator()(T&& t) const ->
+		decltype(std::get<N>(std::forward<T>(t))) {
+			return std::get<N>(std::forward<T>(t));
+		}
 };
 
 namespace ranges {
-template <class T, class U>
-std::ostream& operator << (std::ostream& os, common_pair<T, U> const& p) {
-  return os << '(' << p.first << ", " << p.second << ')';
-}
+	template <class T, class U>
+	std::ostream& operator << (std::ostream& os, common_pair<T, U> const& p) {
+		return os << '(' << p.first << ", " << p.second << ')';
+	}
 }
 //not written by me
 
@@ -131,21 +133,45 @@ int main(int argc, char* argv[])
 	std::vector<int> placeVector;
 	
 	double score = 0;
+	bool adding;
+	bool hasTag;
 	
-	for(int place = 0; place < root["Saves"].size(); place++)
+	for(int place = 0; place < root.size(); place++)
 	{
-		score = compareShift(searchKey, root["Saves"][place]["Name"].asString());
+		adding = false;
+		hasTag = false;
+		score = 0;
 		
+		score = compareShift(searchKey, root[place]["Name"].asString());
 		if(score == 1 || score == 0)
+			adding = true;
+		
+		for(int tag = 0; tag < root[place]["Tags"].size(); tag++)
 		{
-			compareOverlayValues.push_back(compareOverlay(searchKey, root["Saves"][place]["Name"].asString()));
+			if(searchKey == root[place]["Tags"][tag].asString())
+			{
+				hasTag = true;
+				adding = true;
+			}
+		}
+		
+		if(adding)
+		{
+			compareOverlayValues.push_back(compareOverlay(searchKey, root[place]["Name"].asString()));
 			
-			TotalValues.push_back((double)compareOverlayValues.at(compareOverlayValues.size()-1)/(score+1));
+			score = (double)compareOverlayValues.at(compareOverlayValues.size()-1)/(score+1);
+			if(hasTag)
+				score += 30;
+			
+			score += sqrt(root[place]["Score"].asInt()*10);
+			
+			TotalValues.push_back(score);
 			placeVector.push_back(place);
-			
-			score = 0;
 		}
 	}
+	
+	if(returnAmount >= placeVector.size())
+		returnAmount = placeVector.size()-1;
 	
 	if(TotalValues.size() > 0 && returnAmount < placeVector.size())
 	{
@@ -153,15 +179,7 @@ int main(int argc, char* argv[])
 		sort(zipped, less{}, get_n<1>{});
 		
 		for(int place = 0; place <= returnAmount; place++)
-			std::cout << root["Saves"][placeVector.at(placeVector.size()-1-place)]["Name"].asString() << std::endl << TotalValues.at(placeVector.size()-1-place) << std::endl;
-	}
-	else if(returnAmount >= placeVector.size())
-	{
-		auto zipped = view::zip(placeVector, TotalValues);
-		sort(zipped, less{}, get_n<1>{});
-		
-		for(int place = 0; place < placeVector.size(); place++)
-			std::cout << root["Saves"][placeVector.at(placeVector.size()-1-place)]["Name"].asString() << std::endl << TotalValues.at(placeVector.size()-1-place) << std::endl;
+			std::cout << root[placeVector.at(placeVector.size()-1-place)]["ID"] << std::endl;// << TotalValues.at(placeVector.size()-1-place) << std::endl;
 	}
 	
 	return 0;

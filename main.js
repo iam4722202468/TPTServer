@@ -118,7 +118,9 @@ app.get('/Browse.json', function(req,res) {
 	var userID = req.headers['x-auth-user-id'];
 	var userKey = req.headers['x-auth-session-key'];
 	
-	if(req.query.Search_Query != '')
+	if(req.query.Search_Query === undefined)
+		res.send("Error: Invalid Request Format");
+	else if(req.query.Search_Query != '')
 	{
 		if(req.query.Category !== undefined)
 		{
@@ -131,8 +133,10 @@ app.get('/Browse.json', function(req,res) {
 			}
 			else
 			{
-				console.log('Searching by Category');
-				res.send('{"Count":1,"Saves":[{"ID":2,"Created":1442514001,"Updated":1442514001,"Version":0,"Score":17,"ScoreUp":18,"ScoreDown":1,"Name":"Ping Pong Game","ShortName":"Ping Pong Game","Username":"the-good-side","Comments":8,"Published":false}]}');
+				console.log('Searching by user saves');
+				buildByOwnSearch(userID, userKey, req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
+					res.send(data);
+				});
 			}
 		} else {
 			console.log("Searching");
@@ -141,7 +145,6 @@ app.get('/Browse.json', function(req,res) {
 				res.send(data);
 			});
 		}
-		
 	} else if(req.query.Category !== undefined) {
 		if(req.query.Category == "Favourites")
 		{
@@ -158,7 +161,7 @@ app.get('/Browse.json', function(req,res) {
 				buildByOwn(userID, userKey, req.query.Start, req.query.Count, function(data) {
 					res.send(data);
 				});
-			else
+			else //don't think there's any other category...
 				res.send('{"Count":1,"Saves":[{"ID":2,"Created":1442514001,"Updated":1442514001,"Version":0,"Score":17,"ScoreUp":18,"ScoreDown":1,"Name":"Ping Pong Game","ShortName":"Ping Pong Game","Username":"the-good-side","Comments":8,"Published":false}]}');
 		}
 	} else {
@@ -203,8 +206,6 @@ app.get('/Browse/View.json', function(req,res) {
 			} else {
 				res.send(data);
 			}
-		} else {
-			res.send('{"Status":0,"Error":"Could not load save."}');
 		}
 	});
 });
@@ -224,7 +225,7 @@ app.get('/Browse/EditTag.json', function(req,res) {
 	if(req.query.Op ==  'add')
 		addTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
 			if(data !== undefined)
-				res.send('{"Status":0, "Error":' + data + '}');
+				res.send('{"Status":0,"Error":"' + data + '"}');
 			else
 			{
 				var toSend = {};
@@ -238,7 +239,7 @@ app.get('/Browse/EditTag.json', function(req,res) {
 	else if(req.query.Op ==  'delete')
 		removeTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
 			if(data !== undefined)
-				res.send('{"Status":0, "Error":' + data + '}');
+				res.send('{"Status":0, "Error":"' + data + '"}');
 			else
 			{
 				var toSend = {};

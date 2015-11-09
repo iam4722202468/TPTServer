@@ -13,50 +13,8 @@ function sortByKey(array, key) {
 
 function buildSortSaves(saveArray, query, callback_)
 {
-	var lastString = query.split(" ")[query.split(" ").length-1];
-	var secondLastString;
-	
-	if(query.split(" ").length >= 2)
-		secondLastString = query.split(" ")[query.split(" ").length-2];
-	else
-		secondLastString = "";
-	
-	var endingsFound = 0;
-	var firstEnding = "";
-	var userSearch = "";
-	
-	if(lastString.split(":")[0] == "sort" && lastString.split(":").length == 2 && lastString.split(":")[1] != "")
-	{
-		firstEnding = "sort"
-		endingsFound = 1;
-	}
-	else if (lastString.split(":")[0] == "user" && lastString.split(":").length == 2 && lastString.split(":")[1] != "")
-	{
-		userSearch = lastString.split(":")[1];
-		query = query.split(" ").splice(0, query.split(" ").length-1).join(" ") + " sort:score";
-		endingsFound = 1;
-	}
-	
-	if((lastString.split(":")[0] == "sort" && lastString.split(":").length == 2 && lastString.split(":")[1] != "") &&
-		(secondLastString.split(":")[0] == "user" && secondLastString.split(":").length == 2 && secondLastString.split(":")[1] != ""))
-	{
-		userSearch = userSearch = secondLastString.split(":")[1];
-		query = query.split(" ").splice(0, query.split(" ").length-2).join(" ") + " " + query.split(" ")[query.split(" ").length-1];
-		endingsFound = 2;
-	}
-	else if((lastString.split(":")[0] == "user" && lastString.split(":").length == 2 && lastString.split(":")[1] != "") &&
-		(secondLastString.split(":")[0] == "sort" && secondLastString.split(":").length == 2 && secondLastString.split(":")[1] != ""))
-	{
-		userSearch = lastString.split(":")[1];
-		query = query.split(" ").splice(0, query.split(" ").length-1).join(" ");
-		endingsFound = 2;
-	}
-	
-	
-	console.log(endingsFound);
-	
 	var searchable = ['ID', 'DateCreated', 'Date', 'Version', 'Score', 'ScoreUp', 'ScoreDown', 'Views', 'Name', 'ShortName', 'Username', 'Published'];
-	
+	console.log(query);
 	if(query.substr(0, 5) == 'sort:')
 	{
 		if(query.substr(5, 1) == '!')
@@ -92,24 +50,6 @@ function buildSortSaves(saveArray, query, callback_)
 	}
 }
 
-function buildFavouriteSearch(userID, userKey, start, saveCount, query, callback_)
-{
-	buildFavourite(userID, userKey, start, -1, function(data) {
-		searchAndSort(start, saveCount, data.Saves, query, function(returnJSON) {
-			callback_(returnJSON);
-		});
-	});
-}
-
-function buildByOwnSearch(userID, userKey, start, saveCount, query, callback_)
-{
-	buildByOwn(userID, userKey, start, -1, function(data) {
-		searchAndSort(start, saveCount, data.Saves, query, function(returnJSON) {
-			callback_(returnJSON);
-		});
-	});
-}
-
 function buildByOwn(userID, userKey, start, saveCount, callback_)
 {
 	IDtoName(userID, function(userName){
@@ -135,10 +75,7 @@ function buildByOwn(userID, userKey, start, saveCount, callback_)
 					returnJSON.Count = data.length;
 					
 					if(saveCount == -1) //for when sorting by favourite
-					{
-						start = 0;
 						saveCount = returnJSON.Count;
-					}
 					
 					for(var i = start; i < data.length; i++)
 					{
@@ -182,10 +119,7 @@ function buildFavourite(userID, userKey, start, saveCount, callback_)
 					returnJSON.Count = data.length;
 					
 					if(saveCount == -1) //for when sorting by favourite
-					{
-						start = 0;
 						saveCount = returnJSON.Count;
-					}
 					
 					if(data.length - parseInt(saveCount) - parseInt(start) < 0)
 						saveCount = data.length%20;
@@ -249,7 +183,7 @@ function searchByString(searchString, data, callback_)
 {
 	var returnJSON = {"Saves":[]};
 	var saveIDArray = [];
-
+	
 	data.forEach(function(d, i) {
 		getTags(d.ID, function(tagData) {
 			data[i].Tags = tagData;
@@ -307,21 +241,18 @@ function searchAndSort(start, saveCount, data, query, callback_)
 	
 	var lastString = query.split(" ")[query.split(" ").length-1];
 	
-	if((lastString.split(":")[0] == "sort" && lastString.split(":").length == 2 && lastString.split(":")[1] != "") ||
-		(lastString.split(":")[0] == "user" && lastString.split(":").length == 2 && lastString.split(":")[1] != ""))
+	if(lastString.split(":")[0] == "sort" && lastString.split(":").length == 2 && lastString.split(":")[1] != "")
 	{
 		if(query.split(" ").length > 1)
 		{
-			var searchString = query.split(" ").slice(0, query.split(" ").length -1).join(" ");
-			
-			searchByString(searchString, data, function(queryData) {
+			searchByString(query.split(" ").splice(0, query.split(" ").length-1).join(" "), data, function(queryData) {
 				returnJSON = queryData;
 				
 				if(returnJSON.Saves.length == 0)
 				{
 					returnJSON.Count = 0;
 					callback_();
-				} else
+				} else {
 					buildSortSaves(queryData.Saves, query.split(" ")[query.split(" ").length-1], function(sortedSaves) {
 						if(sortedSaves.length > 0)
 							sliceSaves({Saves:sortedSaves}, start, saveCount, function(sendData) {
@@ -330,6 +261,7 @@ function searchAndSort(start, saveCount, data, query, callback_)
 						else
 							callback_();
 					});
+				}
 			});
 		} else {
 			buildSortSaves(data, query.split(" ")[query.split(" ").length-1], function(sortedSaves) {

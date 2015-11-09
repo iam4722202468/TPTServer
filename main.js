@@ -119,23 +119,41 @@ app.get('/Browse.json', function(req,res) {
 	var userKey = req.headers['x-auth-session-key'];
 	
 	if(req.query.Search_Query === undefined)
-		res.send("Error: Invalid Request Format");
-	else if(req.query.Search_Query != '')
+		req.query.Search_Query = '';
+	
+	query = req.query.Search_Query;
+	
+	var searchByUser = false;
+	
+	if(query.substr(0, 5) == "user:" || (query.split(" ") >= 1 && query.split(" ")[query.split(" ").length-1].split(":")[0] == "user" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != ""))
+	{
+		console.log("it's wokring");
+	}
+	else if(query.split(" ") >= 2 && query.split(" ")[query.split(" ").length-2].split(":")[0] == "user" && query.split(" ")[query.split(" ").length-2].split(":").length == 2 && query.split(" ")[query.split(" ").length-2].split(":")[1] != "")
+	{
+		console.log("it's wokring");
+	}
+	
+	if(req.query.Search_Query != '')
 	{
 		if(req.query.Category !== undefined)
 		{
 			if(req.query.Category == "Favourites")
 			{
 				console.log('Searching by Favourite');
-				buildFavouriteSearch(userID, userKey, req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
-					res.send(data);
+				buildFavourite(userID, userKey, 0, -1, function(data) {
+					searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+						res.send(returnJSON);
+					});
 				});
 			}
 			else
 			{
 				console.log('Searching by user saves');
-				buildByOwnSearch(userID, userKey, req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
-					res.send(data);
+				buildByOwn(userID, userKey, 0, -1, function(data) {
+					searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+						res.send(returnJSON);
+					});
 				});
 			}
 		} else {

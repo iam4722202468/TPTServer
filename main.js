@@ -121,20 +121,54 @@ app.get('/Browse.json', function(req,res) {
 	if(req.query.Search_Query === undefined)
 		req.query.Search_Query = '';
 	
-	query = req.query.Search_Query;
+	var query = req.query.Search_Query;
 	
 	var searchByUser = false;
 	
-	if(query.substr(0, 5) == "user:" || (query.split(" ") >= 1 && query.split(" ")[query.split(" ").length-1].split(":")[0] == "user" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != ""))
+	if(query.substr(0,8) == "history:" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != "")
 	{
-		console.log("it's wokring");
+		buildByHistory(parseInt(query.split(" ")[0].split(":")[1]), req.query.Start, req.query.Count, function(data) {
+			res.send(data);
+		})
 	}
-	else if(query.split(" ") >= 2 && query.split(" ")[query.split(" ").length-2].split(":")[0] == "user" && query.split(" ")[query.split(" ").length-2].split(":").length == 2 && query.split(" ")[query.split(" ").length-2].split(":")[1] != "")
+	else if(query.substr(0,3) == "id:" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != "")
 	{
-		console.log("it's wokring");
+		var saveID = {};
+		saveID['ID'] = parseInt(query.split(" ")[0].split(":")[1]);
+		
+		getDBInfo('Saves', saveID, function(data) {
+			if(data.length > 0)
+			{
+				data[0].Version = 0;
+				delete data[0]['_id'];
+				res.send({'Count':1, 'Saves':data});
+			} else
+				res.send({"Status":0,"Error":"No save found with that ID"});
+		});
 	}
-	
-	if(req.query.Search_Query != '')
+	else if((query.substr(0, 5) == "user:" || (query.split(" ").length >= 1 && query.split(" ")[query.split(" ").length-1].split(":")[0] == "user" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != "")) || (query.split(" ").length >= 2 && query.split(" ")[query.split(" ").length-2].split(":")[0] == "user" && query.split(" ")[query.split(" ").length-2].split(":").length == 2 && query.split(" ")[query.split(" ").length-2].split(":")[1] != ""))
+	{
+		var userName = "";
+		
+		if(query.split(" ")[query.split(" ").length-1].split(":")[0] == "user")
+		{
+			userName = query.split(" ")[query.split(" ").length-1].split(":")[1];
+			query = query.split(" ").splice(0, query.split(" ").length-1).join(" ");
+		} else {
+			userName = query.split(" ")[query.split(" ").length-2].split(":")[1];
+			if(query.split(" ").splice(0, query.split(" ").length-2).join(" ").length > 0)
+				query = query.split(" ").splice(0, query.split(" ").length-2).join(" ") + " " + query.split(" ")[query.split(" ").length-1];
+			else
+				query = query.split(" ")[query.split(" ").length-1];
+			
+		}
+		buildByUser(userName, function(data) {
+			searchAndSort(req.query.Start, req.query.Count, data.Saves, query, function(returnJSON) {
+				res.send(returnJSON);
+			});
+		});
+	}
+	else if(req.query.Search_Query != '')
 	{
 		if(req.query.Category !== undefined)
 		{
@@ -337,9 +371,24 @@ app.get('/Browse/Tags', function(req,res) {
 app.use(function (req, res) {
 	if(req.originalUrl.substr(req.originalUrl.lastIndexOf('.')) == '.pti')
 	{
-		res.sendFile(__dirname + '/static/pti/saves' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.pti');
+		var urlParts = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_");
+		
+		if(urlParts.length == 2 && urlParts[1] != 'small')
+			res.sendFile(__dirname + '/userErrors/ThumbnailNotFound.pti');
+		else if(urlParts.length == 3)
+			res.sendFile(__dirname + '/userErrors/ThumbnailNotFound_small.pti');
+		else
+			res.sendFile(__dirname + '/static/pti/saves' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.pti');
 	} else {
-		res.sendFile(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
+		
+		if(req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_").length >= 2) {
+			
+			var saveID = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_")[0];
+			res.sendFile(__dirname + '/static/cps/' + saveID + '/' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
+		
+		} else {
+			res.sendFile(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
+		}
 		console.log(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
 	}
 });

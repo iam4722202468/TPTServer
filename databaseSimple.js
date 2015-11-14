@@ -1,4 +1,4 @@
-function getDBInfo(dbCollection, query, _callback)
+function getDBInfo(dbCollection, query, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -8,7 +8,7 @@ function getDBInfo(dbCollection, query, _callback)
 			
 			collection.find(query).toArray(function(err, docs){
 				db.close();
-				_callback(docs);
+				callback_(docs);
 			});
 		}
 	});

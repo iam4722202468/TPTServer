@@ -40,7 +40,6 @@ function addTag(saveID, tagValue, userKey, callback_)
 				if(dataKey == userHash)
 				{
 					getTags(saveID, function(saveTags) {
-						console.log(saveTags.toString());
 						if(saveTags.indexOf(tagValue) > -1)
 							callback_('Tag already exists');
 						else

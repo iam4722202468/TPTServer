@@ -14,7 +14,7 @@ function sortByKey(array, key) {
 function buildSortSaves(saveArray, query, callback_)
 {
 	var searchable = ['ID', 'DateCreated', 'Date', 'Version', 'Score', 'ScoreUp', 'ScoreDown', 'Views', 'Name', 'ShortName', 'Username', 'Published'];
-	console.log(query);
+	
 	if(query.substr(0, 5) == 'sort:')
 	{
 		if(query.substr(5, 1) == '!')
@@ -48,6 +48,61 @@ function buildSortSaves(saveArray, query, callback_)
 	} else {
 		callback_(['']);
 	}
+}
+
+function buildByHistory(saveID, start, saveCount, callback_)
+{
+	var saves = fs.readdirSync(__dirname + '/static/cps/'+saveID);
+	
+	var returnJSON = {};
+	returnJSON.Saves = [];
+	
+	var saveQuery = {};
+	saveQuery['ID'] = saveID;
+	
+	getDBInfo('Saves', saveQuery, function(data) {
+		if(data.length > 0)
+		{
+			data[0].Version = 0;
+			delete data[0]['_id'];
+			saveData = data;
+		} else
+			callback_({"Status":0,"Error":"No save found with that ID"});
+		
+		var originalName = data[0].Name;
+		
+		saves.forEach(function(d, i) {
+			appendData = JSON.parse(JSON.stringify(data[0])); //copy object
+			appendData.Name = originalName + " (" + i + ")";
+			appendData.Version = parseInt(saves.length - i - 1);
+			
+			returnJSON.Saves.push(appendData);
+			
+			if(i == saves.length - 1) {
+				sliceSaves(returnJSON, start, saveCount, function(returnJSON) {
+					callback_(returnJSON);
+				});
+			}
+		})
+	});
+}
+
+function buildByUser(userName, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Saves');
+			
+			collection.find({$and:[{Username:userName},{Published:true}]}).toArray(function(err, docs){
+				db.close();
+				setVersion(docs, 0, function(saves) {
+					callback_(saves);
+				});
+			});
+		}
+	});
 }
 
 function buildByOwn(userID, userKey, start, saveCount, callback_)
@@ -156,27 +211,36 @@ function getSaves(callback_)
 	query['Published'] = true;
 	
 	getDBInfo('Saves', query, function(data) {
-		callback_(data);
+		setVersion(data, 0, function(saves) {
+			callback_(saves.Saves);
+		});
 	});
 }
 
 function sliceSaves(returnJSON, start, saveCount, callback_)
 {
-	returnJSON.Count = returnJSON.Saves.length;
-	originalSaves = returnJSON.Saves;
-	returnJSON.Saves = [];
-	
-	if(returnJSON.Count - parseInt(saveCount) - parseInt(start) < 0)
-		saveCount = returnJSON.Count%20;
-	
-	originalSaves.slice(start, start+saveCount).forEach(function (d, i) {
-		d.Version = 0;
-		delete d['_id'];
-		returnJSON.Saves.push(d);
+	if(returnJSON.Saves.length == 0)
+	{
+		callback_({"Status":0,"Error":"No saves found"});
+	} else {
+		returnJSON.Count = returnJSON.Saves.length;
+		originalSaves = returnJSON.Saves;
+		returnJSON.Saves = [];
 		
-		if(i == parseInt(saveCount)-1 || i == parseInt(returnJSON.Count)+parseInt(start)-1)
-			callback_(returnJSON);
-	});
+		if(returnJSON.Count - parseInt(saveCount) - parseInt(start) < 0)
+			saveCount = returnJSON.Count%20;
+		
+		originalSaves.slice(start, start+saveCount).forEach(function (d, i) {
+			
+			delete d['_id'];
+			returnJSON.Saves.push(d);
+			
+			if(i == parseInt(saveCount)-1 || i == parseInt(returnJSON.Count)+parseInt(start)-1)
+			{
+				callback_(returnJSON);
+			}
+		});
+	}
 }
 
 function searchByString(searchString, data, callback_)
@@ -241,7 +305,14 @@ function searchAndSort(start, saveCount, data, query, callback_)
 	
 	var lastString = query.split(" ")[query.split(" ").length-1];
 	
-	if(lastString.split(":")[0] == "sort" && lastString.split(":").length == 2 && lastString.split(":")[1] != "")
+	if(query == '')
+	{
+		returnJSON.Saves = sortByKey(data, 'Score');
+		sliceSaves(returnJSON, start, saveCount, function(sendData) {
+			callback_(sendData);
+		});
+	}
+	else if(lastString.split(":")[0] == "sort" && lastString.split(":").length == 2 && lastString.split(":")[1] != "")
 	{
 		if(query.split(" ").length > 1)
 		{
@@ -288,6 +359,15 @@ function searchAndSort(start, saveCount, data, query, callback_)
 				});
 		});
 	}
+}
+
+function setVersion(saves, version, callback_)
+{
+	saves.forEach(function(d, i) {
+		saves[i].Version = version;
+		if(i == saves.length - 1)
+			callback_({Count:saves.length, Saves:saves});
+	});
 }
 
 function buildByAllSearch(start, saveCount, query, callback_)

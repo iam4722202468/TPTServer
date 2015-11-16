@@ -52,7 +52,11 @@ function buildSortSaves(saveArray, query, callback_)
 
 function buildByHistory(saveID, start, saveCount, callback_)
 {
-	var saves = fs.readdirSync(__dirname + '/static/cps/'+saveID);
+	try {
+		var saves = fs.readdirSync(__dirname + '/static/cps/'+saveID);
+	} catch(e) {
+		var saves = undefined;
+	}
 	
 	var returnJSON = {};
 	returnJSON.Saves = [];
@@ -61,29 +65,32 @@ function buildByHistory(saveID, start, saveCount, callback_)
 	saveQuery['ID'] = saveID;
 	
 	getDBInfo('Saves', saveQuery, function(data) {
-		if(data.length > 0)
+		if(data.length > 0 && saves !== undefined)
 		{
 			data[0].Version = 0;
 			delete data[0]['_id'];
 			saveData = data;
+			
+			var originalName = data[0].Name;
+			
+			saves.forEach(function(d, i) {
+				appendData = JSON.parse(JSON.stringify(data[0])); //copy object
+				if(parseInt(saves.length - i - 1) == 0) //make newest save have largest version number
+					appendData.Name = originalName + " (" + parseInt(i+1) + ")";
+				else
+					appendData.Name = originalName + " (" + parseInt(saves.length - i - 1) + ")";
+				appendData.Version = parseInt(saves.length - i - 1);
+				
+				returnJSON.Saves.push(appendData);
+				
+				if(i == saves.length - 1) {
+					sliceSaves(returnJSON, start, saveCount, function(returnJSON) {
+						callback_(returnJSON);
+					});
+				}
+			});
 		} else
 			callback_({"Status":0,"Error":"No save found with that ID"});
-		
-		var originalName = data[0].Name;
-		
-		saves.forEach(function(d, i) {
-			appendData = JSON.parse(JSON.stringify(data[0])); //copy object
-			appendData.Name = originalName + " (" + i + ")";
-			appendData.Version = parseInt(saves.length - i - 1);
-			
-			returnJSON.Saves.push(appendData);
-			
-			if(i == saves.length - 1) {
-				sliceSaves(returnJSON, start, saveCount, function(returnJSON) {
-					callback_(returnJSON);
-				});
-			}
-		})
 	});
 }
 
@@ -363,10 +370,58 @@ function searchAndSort(start, saveCount, data, query, callback_)
 
 function setVersion(saves, version, callback_)
 {
-	saves.forEach(function(d, i) {
-		saves[i].Version = version;
-		if(i == saves.length - 1)
-			callback_({Count:saves.length, Saves:saves});
+	if(saves === undefined || saves.length == 0)
+		callback_({Count:0, Saves:[]});
+	else
+	{
+		saves.forEach(function(d, i) {
+			saves[i].Version = version;
+			if(i == saves.length - 1)
+				callback_({Count:saves.length, Saves:saves});
+		});
+	}
+}
+function FPSort(a,b)
+{
+	if (a.FPScore < b.FPScore)
+		return 1;
+	if (a.FPScore > b.FPScore)
+		return -1;
+	return 0;
+}
+
+function buildFP(start, saveCount, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Saves');
+			
+			collection.find({$and:[{Published:true}, {DateCreated:{$gt: parseInt(new Date()/1000)-604800*4}}]}).toArray(function(err, docs){
+				db.close();
+				
+				sliceSaves({Saves:docs}, start, saveCount, function(sendData) {
+					setVersion(sendData.Saves, 0, function(saves) {
+						if(saves.Saves.length > 0)
+						{
+							saves.Saves.forEach(function(d, i) {
+								saves.Saves[i].FPScore = (d.Score/parseInt(new Date()/1000-d.DateCreated))*1000000;
+								
+								if(i == saves.Saves.length - 1)
+								{
+									saves.Saves = saves.Saves.sort(FPSort);
+									callback_(saves);
+								}
+							});
+						} else {
+							callback_({Count:1, Saves:[], Error:"No saves currently on front page"});
+						}
+					});
+				});
+				
+			});
+		}
 	});
 }
 
@@ -383,6 +438,9 @@ function buildBySort(sortBy, start, saveCount, callback_)
 {
 	var returnJSON = {};
 	
+	if(start%20 == 0 && saveCount == 20)
+		start -= 20;
+		
 	getSaves(function(data) {
 		returnJSON.Saves = sortByKey(data, sortBy);
 		sliceSaves(returnJSON, start, saveCount, function(sendData) {

@@ -64,6 +64,3 @@ db
 		SaveID <int>
 		UserID <int>
 		Tag <string>
-
-db.User.findAndModify({query:{name:"iam2"}, update: {$set:{"name": "moo"}}})
-db.User.find().forEach(printjson);

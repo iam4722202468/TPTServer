@@ -24,7 +24,10 @@ app.post('/Save.api', function(req,res) {
 		var publish = fields.Publish != "Private";
 		
 		addSave(userID, userKey, fields.Name, fields.Description, publish, time, function(data) {
-			res.send("OK " + data.ID);
+			if(data.length < 2)
+				res.send(data);
+			else
+				res.send("OK " + data.ID);
 			version = data.Version
 			filename = data.ID + '';
 			
@@ -220,7 +223,7 @@ app.get('/Browse.json', function(req,res) {
 		if(req.query.Start == '0')
 		{
 			console.log("Building FP");
-			buildBySort('Score', req.query.Start, req.query.Count, function(data) {
+			buildFP(req.query.Start, req.query.Count, function(data) {
 				res.send(data);
 			});
 		}
@@ -303,25 +306,35 @@ app.get('/Browse/EditTag.json', function(req,res) {
 			}
 		});
 });
+
 app.get('/Browse/Delete.json', function(req,res) {
 	console.log('/Browse/Delete.json');
-	console.log(req.query.Mode);
+	console.log(req.query);
+	
 	if(req.query.Mode == 'Unpublish')
 	{
-		
+		setPublish(req.query.ID, req.query.Key, false, function(data) {
+			if(data !== undefined)
+				res.send('{"Status":0,"Error":"' + data + '"}');
+			else
+				res.send('{"Status":1}');
+		});
 	}
 	else if(req.query.Mode == 'Delete')
 	{
-		
+		deleteSave(req.query.ID, req.query.Key, function(data) {
+			if(data !== undefined)
+				res.send('{"Status":0,"Error":"' + data + '"}');
+			else
+				res.send('{"Status":1}')
+		});
 	}
-	
-	res.send('{"Status":1}');
 });
 
 app.get('/Startup.json', function(req,res) {
   console.log(req.headers);
   console.log('/Startup.json');
-  res.send('{"Updates":{"Stable":{"Major":90,"Minor":2,"Build":322,"File":"\/Download\/Builds\/Build-322\/-.ptu"},"Beta":{"Major":90,"Minor":1,"Build":320,"File":"\/Download\/Builds\/Build-320\/-.ptu"},"Snapshot":{"Major":83,"Minor":3,"Build":208,"Snapshot":1346881831,"File":"\/Download\/Builds\/TPTPP\/-.ptu"}},"Notifications":[],"Session":true,"MessageOfTheDay":"TPT has a lot of mods. \bt{a:http:\/\/powdertoy.co.uk\/Discussions\/Categories\/Topics.html?Category=9|Check here.}"} ');
+  res.send('{"Updates":{"Stable":{"Major":90,"Minor":2,"Build":322,"File":"\/Download\/Builds\/Build-322\/-.ptu"},"Beta":{"Major":90,"Minor":1,"Build":320,"File":"\/Download\/Builds\/Build-320\/-.ptu"},"Snapshot":{"Major":83,"Minor":3,"Build":208,"Snapshot":1346881831,"File":"\/Download\/Builds\/TPTPP\/-.ptu"}},"Notifications":[],"Session":true,"MessageOfTheDay":"Iam\'s beta tpt server. \bt{a:http:\/\/iam.starcatcher.us\/iam\/tptserver|Source here.}"} ');
 });
 
 app.post('/Profile.json', function(req,res) {
@@ -369,7 +382,18 @@ app.get('/Browse/Tags', function(req,res) {
 });
 
 app.use(function (req, res) {
-	if(req.originalUrl.substr(req.originalUrl.lastIndexOf('.')) == '.pti')
+	
+	if(req.originalUrl.indexOf('/Browse/View.html') >= 0)
+	{
+		console.log(req.query);
+		setPublish(req.query.ID, req.query.Key, true, function(data) {
+			if(data !== undefined)
+				res.send('{"Status":0,"Error":"' + data + '"}');
+			else
+				res.send('OK');
+		});
+	}
+	else if(req.originalUrl.substr(req.originalUrl.lastIndexOf('.')) == '.pti')
 	{
 		var urlParts = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_");
 		
@@ -380,16 +404,15 @@ app.use(function (req, res) {
 		else
 			res.sendFile(__dirname + '/static/pti/saves' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.pti');
 	} else {
-		
 		if(req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_").length >= 2) {
 			
 			var saveID = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_")[0];
-			res.sendFile(__dirname + '/static/cps/' + saveID + '/' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
+			var saveVersion = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_")[1];
+			res.sendFile(__dirname + '/static/cps/' + saveID + '/' + saveID + "_" + parseInt(saveVersion-1) + '.cps');
 		
 		} else {
 			res.sendFile(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
 		}
-		console.log(__dirname + '/static/cps' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.cps');
 	}
 });
 

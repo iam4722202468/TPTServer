@@ -1,4 +1,6 @@
 var mongodb = require('mongodb');
+var rimraf = require('rimraf');
+
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb://localhost:27017/tpt';
 
@@ -25,8 +27,7 @@ function getTags(saveID, callback_)
 		}
 	});
 }
-
-function addTag(saveID, tagValue, userKey, callback_)
+function checkKey(userKey, callback_) //checks key which is in the format <userID>|<sessionID>
 {
 	var userKey = userKey.split('|');
 	
@@ -38,77 +39,159 @@ function addTag(saveID, tagValue, userKey, callback_)
 		IDtoName(userID, function(userName){
 			getSession(userName, function(dataKey) {
 				if(dataKey == userHash)
-				{
-					getTags(saveID, function(saveTags) {
-						if(saveTags.indexOf(tagValue) > -1)
-							callback_('Tag already exists');
-						else
-						{
-							MongoClient.connect(url, function (err, db) {
-								if (err) {
-									console.log('Unable to connect to the mongoDB server. Error:', err);
-								} else {
-									db.collection("Tags", function(error, collection) {
-										collection.insert({
-											SaveID: parseInt(saveID),
-											UserID: parseInt(userID),
-											Tag: tagValue
-										}, function() {
-											console.log(userName + " successfully added tag to save " + saveID);
-											db.close();
-											callback_();
-										});
-									});
-								}
-							});
-						}
-					});
-				} else {
-					callback_('Invalid Login');
-				}
+					callback_(true, userName, userID);
+				else
+					callback_(false, userName, userID);
 			});
 		});
-	} else {
-		callback_('User login incorrect');
-	}
+	} else 
+		callback_(false, userName, userID);
 }
 
-function removeTag(saveID, tagValue, userKey, callback_)
+function checkSaveOwner(saveID, userName, callback_)
 {
-	var userKey = userKey.split('|');
-	
-	if(userKey.length > 1)
-	{
-		var userID = userKey[0];
-		var userHash = userKey[1];
+	var query = {}
+	query['ID'] = parseInt(saveID);
+						
+	getDBInfo('Saves', query, function(saveData) {
+		if(saveData.length > 0 && saveData[0].Username == userName)
+			callback_(true);
+		else
+			callback_(false);
+	});
+}
 
-		IDtoName(userID, function(userName){
-			getSession(userName, function(dataKey) {
-				if(dataKey == userHash)
+function deleteSave(saveID, userKey, callback_)
+{
+	checkKey(userKey, function(loginCorrect, userName, userID) {
+		if(loginCorrect)
+		{
+			checkSaveOwner(saveID, userName, function(isSame) {
+				if(isSame)
+				{
+					fs.createReadStream(__dirname + "/static/cps/" + saveID + '.cps').pipe(fs.createWriteStream(__dirname + "/static/deleted/" + saveID + '_' + userName + '.cps'));
+					
+					rimraf(__dirname + "/static/pti/saves/" + saveID, function(){});
+					rimraf(__dirname + "/static/cps/" + saveID, function(){});
+					fs.unlinkSync(__dirname + "/static/pti/saves/" + saveID + "_small.pti");
+					fs.unlinkSync(__dirname + "/static/pti/saves/" + saveID + ".pti");
+					fs.unlinkSync(__dirname + "/static/cps/" + saveID + '.cps');
+					
+					getSaveInfo(saveID, function(saveData) {
+						fs.writeFile(__dirname + "/static/deleted/" + saveID + '_' + userName + '.json', JSON.stringify(saveData), function(err) {
+							if(err) {
+								return console.log(err);
+							}
+							
+							var queryID = {};
+							queryID["ID"] = parseInt(saveID);
+							var query = {};
+							query["SaveID"] = parseInt(saveID);
+							
+							deleteDBInfo('Favourite',query);	//Favourite
+							deleteDBInfo('Saves', queryID);		//Saves
+							deleteDBInfo('Comments', query);	//Comments
+							deleteDBInfo('Votes', query);		//Votes
+							deleteDBInfo('Tags', query);		//Tags
+							
+							console.log("Save " + saveID + " was deleted");
+							
+							callback_();
+						});
+					});
+				}
+				else
+					callback_("That is not your save!");
+			});
+		}
+		else
+			callback_("Invalid SessionKey");
+	});
+}
+
+function setPublish(saveID, userKey, isPublished, callback_)
+{
+	checkKey(userKey, function(loginCorrect, userName, userID) {
+		if(loginCorrect)
+		{
+			var query = {}
+			query['ID'] = parseInt(saveID);
+						
+			getDBInfo('Saves', query, function(saveInfo) {
+				if(saveInfo[0].Username == userName)
+				{
+					changeDBInfo('Saves', 'ID', parseInt(saveID), 'Published', isPublished);
+					callback_();
+				}
+				else
+					callback_("That is not your save!");
+			});
+		} else
+			callback_("Invalid SessionKey");
+	});
+}
+
+function addTag(saveID, tagValue, userKey, callback_)
+{
+	checkKey(userKey, function(loginCorrect, userName, userID) {
+		if(loginCorrect)
+		{
+			getTags(saveID, function(saveTags) {
+				if(saveTags.indexOf(tagValue) > -1)
+					callback_('Tag already exists');
+				else
 				{
 					MongoClient.connect(url, function (err, db) {
 						if (err) {
 							console.log('Unable to connect to the mongoDB server. Error:', err);
 						} else {
-							var collection = db.collection('Tags');
-							getSaveInfo(saveID, function(saveData) {
-								if(saveData.Username == userName)
-								{
-									collection.remove({$and:[{'SaveID':parseInt(saveID)},{'Tag':tagValue}]});
+							db.collection("Tags", function(error, collection) {
+								collection.insert({
+									SaveID: parseInt(saveID),
+									UserID: parseInt(userID),
+									Tag: tagValue
+								}, function() {
+									console.log(userName + " successfully added tag to save " + saveID);
 									db.close();
 									callback_();
-								} else {
-									callback_("That save is not owned by you");
-								}
+								});
 							});
 						}
 					});
-				} else {
-					callback_('Invalid Login');
 				}
 			});
-		});
-	}
+		} else {
+			callback_('Invalid Login');
+		}
+	});
+}
+
+function removeTag(saveID, tagValue, userKey, callback_)
+{
+	checkKey(userKey, function(loginCorrect, userName, userID) {
+		if(loginCorrect)
+		{
+			MongoClient.connect(url, function (err, db) {
+				if (err) {
+					console.log('Unable to connect to the mongoDB server. Error:', err);
+				} else {
+					var collection = db.collection('Tags');
+					
+					checkSaveOwner(userID, userName, function(isSame) {
+						if(isSame)
+						{
+							collection.remove({$and:[{'SaveID':parseInt(saveID)},{'Tag':tagValue}]});
+							db.close();
+							callback_();
+						} else
+							callback_("That is not your save!");
+					});
+				}
+			});
+		} else {
+			callback_('Invalid Login');
+		}
+	});
 }
 
 function saveVersion(saveID, version)
@@ -143,10 +226,8 @@ function getSaveInfo(saveID, callback_)
 		if (err) {
 			console.log('Unable to connect to the mongoDB server. Error:', err);
 		} else {
-			var name = 'ID';
-			var value = saveID;
 			var query = {};
-			query[name] = parseInt(value);
+			query['ID'] = parseInt(saveID);
 			
 			getDBInfo('Saves', query, function(data) {
 				if(data.length > 0)
@@ -308,7 +389,10 @@ function IDtoName(userID, callback_)
 			var collection = db.collection('User');
 			collection.find({"ID":parseInt(userID)}).toArray(function(err, docs) {
 				db.close();
-				callback_(docs[0].Name);
+				if(docs.length == 0)
+					callback_("Invalid Username");
+				else
+					callback_(docs[0].Name);
 			});
 		}
 	});
@@ -375,17 +459,20 @@ function setSession(userName, hash)
 
 function getSession(userName, callback_)
 {
-	MongoClient.connect(url, function (err, db) {
-		if (err) {
-			console.log('Unable to connect to the mongoDB server. Error:', err);
-		} else {
-			var collection = db.collection('User');
-			collection.find({"Name":userName}).toArray(function(err, docs){
-				db.close();
-				callback_(docs[0].SessionID);
-			});
-		}
-	});
+	if(userName == "Invalid Username")
+		callback_("Invalid Username");
+	else
+		MongoClient.connect(url, function (err, db) {
+			if (err) {
+				console.log('Unable to connect to the mongoDB server. Error:', err);
+			} else {
+				var collection = db.collection('User');
+				collection.find({"Name":userName}).toArray(function(err, docs){
+					db.close();
+					callback_(docs[0].SessionID);
+				});
+			}
+		});
 }
 
 function saveVote(userID, userKey, saveID, voteDirection, callback_)
@@ -479,73 +566,53 @@ function getFavourite(userID, saveID, callback_)
 
 function addFavourite(saveID, userKey, callback_)
 {
-	var userKey = userKey.split('|');
-	
-	if(userKey.length > 1)
-	{
-		var userID = userKey[0];
-		var userHash = userKey[1];
-		
-		IDtoName(userID, function(userName){
-			getSession(userName, function(dataKey) {
-				if(dataKey == userHash)
-				{
-					MongoClient.connect(url, function (err, db) {
-						if (err) {
-							console.log('Unable to connect to the mongoDB server. Error:', err);
-						} else {
-							db.collection("Favourite", function(error, collection) {
-								collection.remove({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]});
-								
-								collection.insert({
-									SaveID: parseInt(saveID),
-									UserID: parseInt(userID)
-								}, function() {
-									console.log(userID + " successfully favorited to save " + saveID);
-									db.close();
-									callback_();
-								});
-							});
-						}
-					});
+	checkKey(userKey, function(loginCorrect, userName, userID) {
+		if(loginCorrect)
+		{
+			MongoClient.connect(url, function (err, db) {
+				if (err) {
+					console.log('Unable to connect to the mongoDB server. Error:', err);
 				} else {
-					callback_("Invalid Login");
+					db.collection("Favourite", function(error, collection) {
+						collection.remove({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]});
+						
+						collection.insert({
+							SaveID: parseInt(saveID),
+							UserID: parseInt(userID)
+						}, function() {
+							console.log(userID + " successfully favorited to save " + saveID);
+							db.close();
+							callback_();
+						});
+					});
 				}
 			});
-		});
-	}
+		} else {
+			callback_("Invalid Login");
+		}
+	});
 }
 
 function removeFavourite(saveID, userKey, callback_)
 {
-	var userKey = userKey.split('|');
-	
-	if(userKey.length > 1)
-	{
-		var userID = userKey[0];
-		var userHash = userKey[1];
-		
-		IDtoName(userID, function(userName){
-			getSession(userName, function(dataKey) {
-				if(dataKey == userHash)
-				{
-					MongoClient.connect(url, function (err, db) {
-						if (err) {
-							console.log('Unable to connect to the mongoDB server. Error:', err);
-						} else {
-							var collection = db.collection('Favourite');
-							collection.remove({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]});
-							console.log(userID + " successfully removed favorite from save " + saveID);
-							db.close();
-							callback_();
-						}
-					});
+	checkKey(userKey, function(loginCorrect, userName, userID) {
+		if(loginCorrect)
+		{
+			MongoClient.connect(url, function (err, db) {
+				if (err) {
+					console.log('Unable to connect to the mongoDB server. Error:', err);
 				} else {
-					callback_("Invalid Login");
+					var collection = db.collection('Favourite');
+					collection.remove({$and:[{'SaveID':parseInt(saveID)},{'UserID':parseInt(userID)}]});
+					console.log(userID + " successfully removed favorite from save " + saveID);
+					db.close();
+					callback_();
 				}
 			});
-		});
-	}
+		} else {
+			callback_("Invalid Login");
+		}
+	});
 }
 
 function reportSave(userID, userKey, reason, saveID, callback_)
@@ -642,7 +709,7 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, time, 
 			else
 			{
 				console.log("Invalid login from " + userName);
-				return false;
+				callback_("Invalid login");
 			}
 		});
 	});
@@ -721,4 +788,3 @@ function login(userName, callback_)
 		});
 	});
 }
-//You can't say there are no comments; This *is* a comment

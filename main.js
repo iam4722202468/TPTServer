@@ -89,7 +89,7 @@ app.post('/Browse/Report.json', function(req,res) {
 	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
 		reportSave(userID, userKey, fields.Reason, saveID, function(data) {
-			if(!data)
+			if(data !== undefined)
 				res.send('{"Status":1}');
 			else
 				res.send('{"Status":0, "Error":"' + error + '"}');
@@ -125,7 +125,6 @@ app.get('/Browse.json', function(req,res) {
 		req.query.Search_Query = '';
 	
 	var query = req.query.Search_Query;
-	
 	var searchByUser = false;
 	
 	if(query.substr(0,8) == "history:" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != "")
@@ -171,69 +170,35 @@ app.get('/Browse.json', function(req,res) {
 			});
 		});
 	}
-	else if(req.query.Search_Query != '')
+	else if(req.query.Category !== undefined)
 	{
-		if(req.query.Category !== undefined)
-		{
-			if(req.query.Category == "Favourites")
-			{
-				console.log('Searching by Favourite');
-				buildFavourite(userID, userKey, 0, -1, function(data) {
-					searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
-						res.send(returnJSON);
-					});
-				});
-			}
-			else
-			{
-				console.log('Searching by user saves');
-				buildByOwn(userID, userKey, 0, -1, function(data) {
-					searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
-						res.send(returnJSON);
-					});
-				});
-			}
-		} else {
-			console.log("Searching");
-			
-			buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
-				res.send(data);
-			});
-		}
-	} else if(req.query.Category !== undefined) {
 		if(req.query.Category == "Favourites")
 		{
-			console.log("Favourite");
-			
-			buildFavourite(userID, userKey, req.query.Start, req.query.Count, function(data) {
-				res.send(data);
-			});
-		}
-		else
-		{
-			console.log('Category');
-			if(req.query.Category.substr(0,3) == 'by:')
-				buildByOwn(userID, userKey, req.query.Start, req.query.Count, function(data) {
-					res.send(data);
+			//console.log('Searching by Favourite');
+			buildByFavourite(userID, userKey, function(data) {
+				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+					res.send(returnJSON);
 				});
-			else //don't think there's any other category...
-				res.send('{"Count":1,"Saves":[{"ID":2,"Created":1442514001,"Updated":1442514001,"Version":0,"Score":17,"ScoreUp":18,"ScoreDown":1,"Name":"Ping Pong Game","ShortName":"Ping Pong Game","Username":"the-good-side","Comments":8,"Published":false}]}');
-		}
-	} else {
-		if(req.query.Start == '0')
-		{
-			console.log("Building FP");
-			buildFP(req.query.Start, req.query.Count, function(data) {
-				res.send(data);
 			});
 		}
 		else
 		{
-			console.log("Building Most Votes");
-			buildBySort('Score', req.query.Start, req.query.Count, function(data) {
-				res.send(data);
+			//console.log('Searching by Own');
+			buildByOwn(userID, userKey, function(data) {
+				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+					res.send(returnJSON);
+				});
 			});
 		}
+	} else if(req.query.Start == '0') {
+		//console.log("Building FP");
+		buildFP(req.query.Start, req.query.Count, function(data) {
+			res.send(data);
+		});
+	} else {
+		buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
+			res.send(data);
+		});
 	}
 });
 

@@ -42,11 +42,11 @@ function buildSortSaves(saveArray, query, callback_)
 			}
 			if(searchPlace == searchable.length-1)
 			{
-				callback_(['']);
+				callback_([]);
 			}
 		}
 	} else {
-		callback_(['']);
+		callback_([]);
 	}
 }
 
@@ -74,8 +74,8 @@ function buildByHistory(saveID, start, saveCount, callback_)
 			var originalName = data[0].Name;
 			
 			saves.forEach(function(d, i) {
-				appendData = JSON.parse(JSON.stringify(data[0])); //copy object
-				if(parseInt(saves.length - i - 1) == 0) //make newest save have largest version number
+				appendData = JSON.parse(JSON.stringify(data[0]));	//copy object
+				if(parseInt(saves.length - i - 1) == 0)				//make newest save have largest version number
 					appendData.Name = originalName + " (" + parseInt(i+1) + ")";
 				else
 					appendData.Name = originalName + " (" + parseInt(saves.length - i - 1) + ")";
@@ -112,7 +112,7 @@ function buildByUser(userName, callback_)
 	});
 }
 
-function buildByOwn(userID, userKey, start, saveCount, callback_)
+function buildByOwn(userID, userKey, callback_)
 {
 	IDtoName(userID, function(userName){
 		getSession(userName, function(dataKey) {
@@ -131,24 +131,24 @@ function buildByOwn(userID, userKey, start, saveCount, callback_)
 					if(data.length == 0)
 					{
 						returnJSON.Count = 0;
-						callback_(returnJSON);
-					}
-					
-					returnJSON.Count = data.length;
-					
-					if(saveCount == -1) //for when sorting by favourite
-						saveCount = returnJSON.Count;
-					
-					for(var i = start; i < data.length; i++)
-					{
-						data[i].Version = 0;
-						delete data[i]['_id'];
-						returnJSON.Saves.push(data[i]);
+						callback_({"Status":0,"Error":"No saves found"});
+					} else {
+						returnJSON.Count = data.length;
 						
-						if(i == start+saveCount || i == data.length-1)
+						if(saveCount == -1) //for when sorting by favourite
+							saveCount = returnJSON.Count;
+						
+						for(var i = start; i < data.length; i++)
 						{
-							callback_(returnJSON);
-							break;
+							data[i].Version = 0;
+							delete data[i]['_id'];
+							returnJSON.Saves.push(data[i]);
+							
+							if(i == start+saveCount || i == data.length-1)
+							{
+								callback_(returnJSON);
+								break;
+							}
 						}
 					}
 				});
@@ -159,7 +159,7 @@ function buildByOwn(userID, userKey, start, saveCount, callback_)
 	});
 }
 
-function buildFavourite(userID, userKey, start, saveCount, callback_)
+function buildByFavourite(userID, userKey, callback_)
 {
 	IDtoName(userID, function(userName){
 		getSession(userName, function(dataKey) {
@@ -186,22 +186,10 @@ function buildFavourite(userID, userKey, start, saveCount, callback_)
 					if(data.length - parseInt(saveCount) - parseInt(start) < 0)
 						saveCount = data.length%20;
 					
-					data.slice(start, start+saveCount).forEach(function (d, i) { //should be rewritten before release 
-						//db.Saves.find({$or:[{ID:3}, {ID:4}]})
-						var saveQuery = {};
-						saveQuery['ID'] = d.SaveID;
-						
-						getDBInfo('Saves', saveQuery, function(saveData) {
-							if(saveData.length > 0)
-							{
-								saveData[0].Version = 0;
-								returnJSON.Saves.push(saveData[0]);
-							}
-							
-							if(i == saveCount-1 || i == data.length+start-1)
-								callback_(returnJSON);
-						});
+					getSavesFromList(data.slice(start, start+saveCount), function(saves) {
+						callback_(saves);
 					});
+					
 				});	
 			} else {
 				callback_('Invalid Login');
@@ -238,7 +226,6 @@ function sliceSaves(returnJSON, start, saveCount, callback_)
 			saveCount = returnJSON.Count%20;
 		
 		originalSaves.slice(start, start+saveCount).forEach(function (d, i) {
-			
 			delete d['_id'];
 			returnJSON.Saves.push(d);
 			
@@ -328,8 +315,7 @@ function searchAndSort(start, saveCount, data, query, callback_)
 				
 				if(returnJSON.Saves.length == 0)
 				{
-					returnJSON.Count = 0;
-					callback_();
+					callback_({"Status":0,"Error":"No saves found"});
 				} else {
 					buildSortSaves(queryData.Saves, query.split(" ")[query.split(" ").length-1], function(sortedSaves) {
 						if(sortedSaves.length > 0)
@@ -337,7 +323,7 @@ function searchAndSort(start, saveCount, data, query, callback_)
 								callback_(sendData);
 							});
 						else
-							callback_();
+							callback_({"Status":0,"Error":"No saves found"});
 					});
 				}
 			});
@@ -348,7 +334,7 @@ function searchAndSort(start, saveCount, data, query, callback_)
 						callback_(sendData);
 					});
 				else
-					callback_();
+					callback_({"Status":0,"Error":"No saves found"});
 			});
 		}
 	
@@ -358,8 +344,7 @@ function searchAndSort(start, saveCount, data, query, callback_)
 			
 			if(returnJSON.Saves.length == 0)
 			{
-				returnJSON.Count = 0;
-				callback_();
+				callback_({"Status":0,"Error":"No saves found"});
 			} else
 				sliceSaves(returnJSON, start, saveCount, function(sendData) {
 					callback_(sendData);
@@ -381,6 +366,7 @@ function setVersion(saves, version, callback_)
 		});
 	}
 }
+
 function FPSort(a,b)
 {
 	if (a.FPScore < b.FPScore)
@@ -429,7 +415,10 @@ function buildByAllSearch(start, saveCount, query, callback_)
 {
 	getSaves(function(data) {
 		searchAndSort(start, saveCount, data, query, function(returnJSON) {
-			callback_(returnJSON);
+			if(returnJSON === undefined)
+				callback_({"Status":0,"Error":"No saves found"});
+			else
+				callback_(returnJSON);
 		});
 	});
 }

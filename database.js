@@ -729,6 +729,7 @@ function getComments(saveID, start, length, callback_)
 					db.close();
 					callback_(docs);
 				} else {
+					docs = docs.reverse();
 					pages = Math.floor(docs.length/length)+1;
 					relativePage = Math.floor(start/length) % pages;
 					db.close();

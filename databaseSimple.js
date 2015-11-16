@@ -27,6 +27,32 @@ function deleteDBInfo(dbCollection, query)
 	});
 }
 
+function getSavesFromList(searchArray, callback_)
+{
+	MongoClient.connect(url, function (err, db) {
+		if (err) {
+			console.log('Unable to connect to the mongoDB server. Error:', err);
+		} else {
+			var collection = db.collection('Saves');
+			var saveArray = [];
+			
+			searchArray.forEach(function(d, i) {
+				saveArray.push({ID:d.SaveID});
+				
+				if(i == searchArray.length - 1)
+				{
+					collection.find({$or:saveArray}).toArray(function(err, docs){
+						db.close();
+						setVersion(docs, 0, function(saves) {
+							callback_(saves);
+						});
+					});
+				}
+			});
+		}
+	});
+}
+
 function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue)
 {
 	MongoClient.connect(url, function (err, db) {

@@ -31,7 +31,7 @@ app.post('/Save.api', function(req,res) {
 			version = data.Version
 			filename = data.ID + '';
 			
-			renderSavePTI(filePath, time, filename, function() {
+			renderSavePTI(filePath, version, filename, function() {
 				fs.rename(filePath, __dirname + "/static/cps/" + filename + '.cps');
 				saveVersion(filename, version);
 			});
@@ -363,9 +363,15 @@ app.use(function (req, res) {
 		var urlParts = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_");
 		
 		if(urlParts.length == 2 && urlParts[1] != 'small')
-			res.sendFile(__dirname + '/userErrors/ThumbnailNotFound.pti');
+		{
+			var saveID = urlParts[0].split("/")[1];
+			res.sendFile(__dirname + '/static/pti/saves/' + saveID + '/' + saveID + '_' + parseInt(urlParts[1]-1) + '.pti');
+		}
 		else if(urlParts.length == 3)
-			res.sendFile(__dirname + '/userErrors/ThumbnailNotFound_small.pti');
+		{
+			var saveID = urlParts[0].split("/")[1];
+			res.sendFile(__dirname + '/static/pti/saves/' + saveID + '/' + saveID + '_' + parseInt(urlParts[1]-1) + '_small.pti');
+		}
 		else
 			res.sendFile(__dirname + '/static/pti/saves' + req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')) + '.pti');
 	} else {

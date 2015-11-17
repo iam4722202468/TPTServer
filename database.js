@@ -201,7 +201,7 @@ function saveVersion(saveID, version)
 	});
 }
 
-function renderSavePTI(filePath, time, filename, callback_)
+function renderSavePTI(filePath, version, filename, callback_)
 {
 	var renderer = require("child_process").exec(__dirname + "/render/render64 " + filePath.replace(/^.*[\\\/]/, '') + " " + filename)
 	
@@ -212,8 +212,8 @@ function renderSavePTI(filePath, time, filename, callback_)
 		fs.rename(__dirname + "/render/" + filename + '-small.pti', __dirname + "/static/pti/saves/" + filename + '_small.pti');
 		
 		mkdirp(__dirname + '/static/pti/saves/'+filename, function(err) { 	
-			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + time + '.pti'));
-			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '_small.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + time + '_small.pti'));
+			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + version + '.pti'));
+			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '_small.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + version + '_small.pti'));
 		});
 		
 		callback_();

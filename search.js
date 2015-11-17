@@ -125,32 +125,12 @@ function buildByOwn(userID, userKey, callback_)
 				query['Username'] = userName;
 				
 				getDBInfo('Saves', query, function(data) {
-					
-					data = sortByKey(data, 'Score');
-					
 					if(data.length == 0)
-					{
-						returnJSON.Count = 0;
 						callback_({"Status":0,"Error":"No saves found"});
-					} else {
-						returnJSON.Count = data.length;
-						
-						if(saveCount == -1) //for when sorting by favourite
-							saveCount = returnJSON.Count;
-						
-						for(var i = start; i < data.length; i++)
-						{
-							data[i].Version = 0;
-							delete data[i]['_id'];
-							returnJSON.Saves.push(data[i]);
-							
-							if(i == start+saveCount || i == data.length-1)
-							{
-								callback_(returnJSON);
-								break;
-							}
-						}
-					}
+					else
+						setVersion(data, 0, function(saves) {
+							callback_(saves);
+						});
 				});
 			} else {
 				callback_("Invalid Login");
@@ -172,24 +152,9 @@ function buildByFavourite(userID, userKey, callback_)
 				query['UserID'] = parseInt(userID);
 				
 				getDBInfo('Favourite', query, function(data) {
-					if(data.length == 0)
-					{
-						returnJSON.Count = 0;
-						callback_(returnJSON);
-					}
-					
-					returnJSON.Count = data.length;
-					
-					if(saveCount == -1) //for when sorting by favourite
-						saveCount = returnJSON.Count;
-					
-					if(data.length - parseInt(saveCount) - parseInt(start) < 0)
-						saveCount = data.length%20;
-					
-					getSavesFromList(data.slice(start, start+saveCount), function(saves) {
+					getSavesFromList(data, function(saves) {
 						callback_(saves);
 					});
-					
 				});	
 			} else {
 				callback_('Invalid Login');

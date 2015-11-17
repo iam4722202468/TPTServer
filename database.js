@@ -29,23 +29,27 @@ function getTags(saveID, callback_)
 }
 function checkKey(userKey, callback_) //checks key which is in the format <userID>|<sessionID>
 {
-	var userKey = userKey.split('|');
-	
-	if(userKey.length > 1)
-	{
-		var userID = userKey[0];
-		var userHash = userKey[1];
+	console.log(userKey);
+	if(userKey !== undefined) {
+		var userKey = userKey.split('|');
 		
-		IDtoName(userID, function(userName){
-			getSession(userName, function(dataKey) {
-				if(dataKey == userHash)
-					callback_(true, userName, userID);
-				else
-					callback_(false, userName, userID);
+		if(userKey.length > 1)
+		{
+			var userID = userKey[0];
+			var userHash = userKey[1];
+			
+			IDtoName(userID, function(userName){
+				getSession(userName, function(dataKey) {
+					if(dataKey == userHash)
+						callback_(true, userName, userID);
+					else
+						callback_(false, userName, userID);
+				});
 			});
-		});
-	} else 
-		callback_(false, userName, userID);
+		} else 
+			callback_(false, userName, userID);
+	} else
+		callback_(false, 0, 0);
 }
 
 function checkSaveOwner(saveID, userName, callback_)
@@ -742,39 +746,43 @@ function getComments(saveID, start, length, callback_)
 
 function addComment(userID, userKey, comment, saveID, callback_)
 {
-	IDtoName(userID, function(userName) {
-		getSession(userName, function(dataKey) {
-			if(dataKey == userKey)
-			{
-				MongoClient.connect(url, function (err, db) {
-					if (err) {
-						console.log('Unable to connect to the mongoDB server. Error:', err);
-						callback("Database problem");
-					} else {
-						var collection = db.collection('Comments');
-						getComments(saveID, 0, -1, function(comments) {
-							collection.insert({
-								SaveID: parseInt(saveID),
-								CommentID: comments.length,
-								Username: userName,
-								UserID: userID,
-								Gravatar: "",
-								Text: comment,
-								Timestamp: parseInt(new Date()/1000),
-								FormattedUsername: userName
-							}, function() {
-								console.log("Successfully inserted with Comment " + comment);
-								db.close();
-								callback_();
+	if(comment.length < 300) //max comment length
+	{
+		IDtoName(userID, function(userName) {
+			getSession(userName, function(dataKey) {
+				if(dataKey == userKey)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+							callback("Database problem");
+						} else {
+							var collection = db.collection('Comments');
+							getComments(saveID, 0, -1, function(comments) {
+								collection.insert({
+									SaveID: parseInt(saveID),
+									CommentID: comments.length,
+									Username: userName,
+									UserID: userID,
+									Gravatar: "",
+									Text: comment,
+									Timestamp: parseInt(new Date()/1000),
+									FormattedUsername: userName
+								}, function() {
+									console.log("Successfully inserted with Comment " + comment);
+									db.close();
+									callback_();
+								});
 							});
-						});
-					}
-				});
-			} else {
-				callback_("Invalid Login");
-			}
+						}
+					});
+				} else {
+					callback_("Invalid Login");
+				}
+			});
 		});
-	});
+	} else
+	 callback_("Comment too long");
 }
 
 function login(userName, callback_)

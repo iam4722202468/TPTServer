@@ -176,9 +176,12 @@ app.get('/Browse.json', function(req,res) {
 		{
 			//console.log('Searching by Favourite');
 			buildByFavourite(userID, userKey, function(data) {
-				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
-					res.send(returnJSON);
-				});
+				if(data.Saves.length == 0)
+					res.send({"Status":0,"Error":"No saves found"});
+				else
+					searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+						res.send(returnJSON);
+					});
 			});
 		}
 		else
@@ -196,9 +199,15 @@ app.get('/Browse.json', function(req,res) {
 			res.send(data);
 		});
 	} else {
-		buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
-			res.send(data);
-		});
+		if(req.query.Search_Query == '') {
+			buildBySort('Score', req.query.Start, req.query.Count, function(data) {
+				res.send(data);
+			});
+		} else {
+			buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
+				res.send(data);
+			});
+		}
 	}
 });
 
@@ -387,7 +396,7 @@ app.use(function (req, res) {
 	}
 });
 
-http.listen(3000, function(){
-	console.log('listening on *:3000');
+http.listen(3100, function(){
+	console.log('listening on *:3100');
 	process.chdir(__dirname + "/render");
 });

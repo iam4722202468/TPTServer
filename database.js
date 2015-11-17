@@ -27,9 +27,9 @@ function getTags(saveID, callback_)
 		}
 	});
 }
+
 function checkKey(userKey, callback_) //checks key which is in the format <userID>|<sessionID>
 {
-	console.log(userKey);
 	if(userKey !== undefined) {
 		var userKey = userKey.split('|');
 		

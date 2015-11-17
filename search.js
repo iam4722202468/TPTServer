@@ -145,16 +145,17 @@ function buildByFavourite(userID, userKey, callback_)
 		getSession(userName, function(dataKey) {
 			if(dataKey == userKey)
 			{
-				var returnJSON = {};
-				returnJSON.Saves = [];
-				
 				var query = {};
 				query['UserID'] = parseInt(userID);
 				
 				getDBInfo('Favourite', query, function(data) {
-					getSavesFromList(data, function(saves) {
-						callback_(saves);
-					});
+					if(data.length != 0) {
+						getSavesFromList(data, function(saves) {
+							callback_(saves);
+						});
+					} else {
+						callback_({Saves:[]});
+					}
 				});	
 			} else {
 				callback_('Invalid Login');

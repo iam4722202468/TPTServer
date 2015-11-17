@@ -118,15 +118,12 @@ function buildByOwn(userID, userKey, callback_)
 		getSession(userName, function(dataKey) {
 			if(dataKey == userKey)
 			{
-				var returnJSON = {};
-				returnJSON.Saves = [];
-				
 				var query = {};
 				query['Username'] = userName;
 				
 				getDBInfo('Saves', query, function(data) {
 					if(data.length == 0)
-						callback_({"Status":0,"Error":"No saves found"});
+						callback_({Saves:[]});
 					else
 						setVersion(data, 0, function(saves) {
 							callback_(saves);
@@ -149,13 +146,12 @@ function buildByFavourite(userID, userKey, callback_)
 				query['UserID'] = parseInt(userID);
 				
 				getDBInfo('Favourite', query, function(data) {
-					if(data.length != 0) {
+					if(data.length == 0)
+						callback_({Saves:[]});
+					else
 						getSavesFromList(data, function(saves) {
 							callback_(saves);
 						});
-					} else {
-						callback_({Saves:[]});
-					}
 				});	
 			} else {
 				callback_('Invalid Login');
@@ -265,7 +261,9 @@ function searchAndSort(start, saveCount, data, query, callback_)
 	
 	var lastString = query.split(" ")[query.split(" ").length-1];
 	
-	if(query == '')
+	if(data.length == 0)
+		callback_({"Status":0,"Error":"No saves found"});
+	else if(query == '')
 	{
 		returnJSON.Saves = sortByKey(data, 'Score');
 		sliceSaves(returnJSON, start, saveCount, function(sendData) {

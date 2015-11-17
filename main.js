@@ -176,16 +176,14 @@ app.get('/Browse.json', function(req,res) {
 		{
 			//console.log('Searching by Favourite');
 			buildByFavourite(userID, userKey, function(data) {
-				if(data.Saves.length == 0)
-					res.send({"Status":0,"Error":"No saves found"});
-				else
-					searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
-						res.send(returnJSON);
-					});
+				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+					res.send(returnJSON);
+				});
 			});
 		}
 		else
 		{
+			console.log("MOO");
 			//console.log('Searching by Own');
 			buildByOwn(userID, userKey, function(data) {
 				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
@@ -193,7 +191,7 @@ app.get('/Browse.json', function(req,res) {
 				});
 			});
 		}
-	} else if(req.query.Start == '0') {
+	} else if(req.query.Start == '0' && req.query.Search_Query == '') {
 		//console.log("Building FP");
 		buildFP(req.query.Start, req.query.Count, function(data) {
 			res.send(data);

@@ -465,7 +465,7 @@ function getSession(userName, callback_)
 {
 	if(userName == "Invalid Username")
 		callback_("Invalid Username");
-	else
+	else {
 		MongoClient.connect(url, function (err, db) {
 			if (err) {
 				console.log('Unable to connect to the mongoDB server. Error:', err);
@@ -477,6 +477,7 @@ function getSession(userName, callback_)
 				});
 			}
 		});
+	}
 }
 
 function saveVote(userID, userKey, saveID, voteDirection, callback_)
@@ -698,7 +699,7 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, time, 
 									
 									getSaveVersion(newSaveID, function(lastVersion) {
 										collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
-										collection.update({"ID" : newSaveID}, {$set: {'Updated':time}});
+										collection.update({"ID" : newSaveID}, {$set: {'Date':time}});
 										collection.update({"ID" : newSaveID}, {$set: {'Description':saveDescription}});
 										collection.update({"ID" : newSaveID}, {$set: {'Published':savePublish}});
 										console.log("The last version is " + parseInt(lastVersion+1));

@@ -261,7 +261,7 @@ function searchAndSort(start, saveCount, data, query, callback_)
 	
 	var lastString = query.split(" ")[query.split(" ").length-1];
 	
-	if(data.length == 0)
+	if(data === undefined || data.length == 0)
 		callback_({"Status":0,"Error":"No saves found"});
 	else if(query == '')
 	{

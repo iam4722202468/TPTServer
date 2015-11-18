@@ -183,7 +183,6 @@ app.get('/Browse.json', function(req,res) {
 		}
 		else
 		{
-			console.log("MOO");
 			//console.log('Searching by Own');
 			buildByOwn(userID, userKey, function(data) {
 				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
@@ -394,7 +393,7 @@ app.use(function (req, res) {
 	}
 });
 
-http.listen(3100, function(){
-	console.log('listening on *:3100');
+http.listen(3000, function(){
+	console.log('listening on *:3000');
 	process.chdir(__dirname + "/render");
 });

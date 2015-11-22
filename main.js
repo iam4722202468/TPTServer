@@ -18,16 +18,18 @@ app.post('/Save.api', function(req,res) {
 	var form = new formidable.IncomingForm({
 		uploadDir: __dirname + '/render'
 	});
+	form.maxFieldsSize = 3 * 1024 * 1024;
+	
 	form.parse(req, function(err, fields, file) { //Name: 'moo', Description: '', Publish: 'Private'
 		var time = parseInt(new Date() / 1000);
 		
 		var publish = fields.Publish != "Private";
 		
 		addSave(userID, userKey, fields.Name, fields.Description, publish, time, function(data) {
-			console.log(data, data.length);
-			if(data.length != 2)
+			if(data.length !== undefined) { //not sure why this works...
+				fs.unlinkSync(filePath);
 				res.send(data);
-			else {
+			} else {
 				res.send("OK " + data.ID);
 				
 				version = data.Version
@@ -352,7 +354,7 @@ app.post('/Login.json', function(req,res) {
 });
 
 app.get('/Browse/Tags', function(req,res) {
-	res.end();
+	res.send('{"moo"}');
 });
 
 app.use(function (req, res) {

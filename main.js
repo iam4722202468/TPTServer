@@ -24,17 +24,20 @@ app.post('/Save.api', function(req,res) {
 		var publish = fields.Publish != "Private";
 		
 		addSave(userID, userKey, fields.Name, fields.Description, publish, time, function(data) {
-			if(data.length < 2)
+			console.log(data, data.length);
+			if(data.length != 2)
 				res.send(data);
-			else
+			else {
 				res.send("OK " + data.ID);
-			version = data.Version
-			filename = data.ID + '';
-			
-			renderSavePTI(filePath, version, filename, function() {
-				fs.rename(filePath, __dirname + "/static/cps/" + filename + '.cps');
-				saveVersion(filename, version);
-			});
+				
+				version = data.Version
+				filename = data.ID + '';
+				
+				renderSavePTI(filePath, version, filename, function() {
+					fs.rename(filePath, __dirname + "/static/cps/" + filename + '.cps');
+					saveVersion(filename, version);
+				});
+			}
 		});
 	});
 	

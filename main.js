@@ -3,7 +3,21 @@ var express = require('express'),
 	http = require('http').Server(app),
 	fs = require('fs'),
 	formidable = require('formidable'),
-	mkdirp = require('mkdirp');
+	mkdirp = require('mkdirp'),
+	path = require('path');
+
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+var signup = require('./routes/register');
+app.use('/register', signup);
 
 var database = require('./database.js');
 var databaseSimple = require('./databaseSimple.js');
@@ -353,11 +367,11 @@ app.post('/Login.json', function(req,res) {
 });
 
 app.get('/Browse/Tags', function(req,res) {
+	//add tags here
 	res.end();
 });
 
 app.use(function (req, res) {
-	
 	if(req.originalUrl.indexOf('/Browse/View.html') >= 0)
 	{
 		console.log(req.query);
@@ -368,6 +382,8 @@ app.use(function (req, res) {
 				res.send('OK');
 		});
 	}
+	else if(req.originalUrl.indexOf('web') >= 0)
+		res.sendFile(__dirname + '/static' + req.originalUrl);
 	else if(req.originalUrl.substr(req.originalUrl.lastIndexOf('.')) == '.pti')
 	{
 		var urlParts = req.originalUrl.substr(0, req.originalUrl.lastIndexOf('.')).split("_");

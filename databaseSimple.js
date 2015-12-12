@@ -1,3 +1,9 @@
+var mongodb = require('mongodb'),
+	MongoClient = mongodb.MongoClient,
+	url = 'mongodb://localhost:27017/tpt';
+
+var search = require('./search.js');
+
 function getDBInfo(dbCollection, query, callback_)
 {
 	MongoClient.connect(url, function (err, db) {
@@ -43,7 +49,7 @@ function getSavesFromList(searchArray, callback_)
 				{
 					collection.find({$or:saveArray}).toArray(function(err, docs){
 						db.close();
-						setVersion(docs, 0, function(saves) {
+						search.setVersion(docs, 0, function(saves) {
 							callback_(saves);
 						});
 					});
@@ -80,3 +86,8 @@ function changeDBInfo(dbCollection, searchKey, searchValue, newKey, newValue)
 		}
 	});
 }
+
+module.exports.deleteDBInfo = deleteDBInfo;
+module.exports.getDBInfo = getDBInfo;
+module.exports.changeDBInfo = changeDBInfo;
+module.exports.getSavesFromList = getSavesFromList;

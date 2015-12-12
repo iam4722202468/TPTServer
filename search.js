@@ -1,3 +1,11 @@
+var database = require('./database.js');
+var databaseSimple = require('./databaseSimple.js');
+
+var mongodb = require('mongodb'),
+	MongoClient = mongodb.MongoClient,
+	url = 'mongodb://localhost:27017/tpt',
+	fs = require('fs');
+
 function sortByKeyInverse(array, key) {
     return array.sort(function(a, b) {
         var x = a[key]; var y = b[key];
@@ -56,6 +64,7 @@ function buildByHistory(saveID, start, saveCount, callback_)
 		var saves = fs.readdirSync(__dirname + '/static/cps/'+saveID);
 	} catch(e) {
 		var saves = undefined;
+		console.log(e);
 	}
 	
 	var returnJSON = {};
@@ -64,7 +73,7 @@ function buildByHistory(saveID, start, saveCount, callback_)
 	var saveQuery = {};
 	saveQuery['ID'] = saveID;
 	
-	getDBInfo('Saves', saveQuery, function(data) {
+	databaseSimple.getDBInfo('Saves', saveQuery, function(data) {
 		if(data.length > 0 && saves !== undefined)
 		{
 			data[0].Version = 0;
@@ -114,14 +123,14 @@ function buildByUser(userName, callback_)
 
 function buildByOwn(userID, userKey, callback_)
 {
-	IDtoName(userID, function(userName){
-		getSession(userName, function(dataKey) {
+	database.IDtoName(userID, function(userName){
+		database.getSession(userName, function(dataKey) {
 			if(dataKey == userKey)
 			{
 				var query = {};
 				query['Username'] = userName;
 				
-				getDBInfo('Saves', query, function(data) {
+				databaseSimple.getDBInfo('Saves', query, function(data) {
 					if(data.length == 0)
 						callback_({Saves:[]});
 					else
@@ -138,18 +147,18 @@ function buildByOwn(userID, userKey, callback_)
 
 function buildByFavourite(userID, userKey, callback_)
 {
-	IDtoName(userID, function(userName){
-		getSession(userName, function(dataKey) {
+	database.IDtoName(userID, function(userName){
+		database.getSession(userName, function(dataKey) {
 			if(dataKey == userKey)
 			{
 				var query = {};
 				query['UserID'] = parseInt(userID);
 				
-				getDBInfo('Favourite', query, function(data) {
+				databaseSimple.getDBInfo('Favourite', query, function(data) {
 					if(data.length == 0)
 						callback_({Saves:[]});
 					else
-						getSavesFromList(data, function(saves) {
+						databaseSimple.getSavesFromList(data, function(saves) {
 							callback_(saves);
 						});
 				});	
@@ -167,7 +176,7 @@ function getSaves(callback_)
 	var query = {};
 	query['Published'] = true;
 	
-	getDBInfo('Saves', query, function(data) {
+	databaseSimple.getDBInfo('Saves', query, function(data) {
 		setVersion(data, 0, function(saves) {
 			callback_(saves.Saves);
 		});
@@ -205,12 +214,12 @@ function searchByString(searchString, data, callback_)
 	var saveIDArray = [];
 	
 	data.forEach(function(d, i) {
-		getTags(d.ID, function(tagData) {
+		database.getTags(d.ID, function(tagData) {
 			data[i].Tags = tagData;
 			if(i == data.length-1)
 			{
 				var fs = require('fs');
-				var filename = generateHash();
+				var filename = database.generateHash();
 				fs.writeFile(__dirname + "/tmp/"+filename, JSON.stringify(data), function(err) {
 					var exec = require('child_process').exec;
 					var child = exec(__dirname + '/search/search ' + __dirname + "/tmp/"+filename + ' 100 ' + searchString);
@@ -401,3 +410,14 @@ function buildBySort(sortBy, start, saveCount, callback_)
 		});
 	});
 }
+
+module.exports.setVersion = setVersion;
+module.exports.buildBySort = buildBySort;
+module.exports.buildByAllSearch = buildByAllSearch;
+module.exports.buildFP = buildFP;
+module.exports.searchAndSort = searchAndSort;
+module.exports.buildByFavourite = buildByFavourite;
+module.exports.buildByOwn = buildByOwn;
+module.exports.buildByUser = buildByUser;
+module.exports.buildByHistory = buildByHistory;
+module.exports.buildSortSaves = buildSortSaves;

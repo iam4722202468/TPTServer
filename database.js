@@ -1,8 +1,13 @@
-var mongodb = require('mongodb');
-var rimraf = require('rimraf');
+var mongodb = require('mongodb'),
+	fs = require('fs'),
+	rimraf = require('rimraf'),
+	fs = require('fs'),
+	mkdirp = require('mkdirp');
 
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb://localhost:27017/tpt';
+
+var databaseSimple = require('./databaseSimple.js');
 
 function getTags(saveID, callback_)
 {
@@ -11,7 +16,7 @@ function getTags(saveID, callback_)
 	var query = {};
 	query[name] = parseInt(value);
 	
-	getDBInfo('Tags', query, function(data) {
+	databaseSimple.getDBInfo('Tags', query, function(data) {
 		var returnArray = [];
 		if(data.length <= 0)
 		{
@@ -57,7 +62,7 @@ function checkSaveOwner(saveID, userName, callback_)
 	var query = {}
 	query['ID'] = parseInt(saveID);
 						
-	getDBInfo('Saves', query, function(saveData) {
+	databaseSimple.getDBInfo('Saves', query, function(saveData) {
 		if(saveData.length > 0 && saveData[0].Username == userName)
 			callback_(true);
 		else
@@ -92,11 +97,11 @@ function deleteSave(saveID, userKey, callback_)
 							var query = {};
 							query["SaveID"] = parseInt(saveID);
 							
-							deleteDBInfo('Favourite',query);	//Favourite
-							deleteDBInfo('Saves', queryID);		//Saves
-							deleteDBInfo('Comments', query);	//Comments
-							deleteDBInfo('Votes', query);		//Votes
-							deleteDBInfo('Tags', query);		//Tags
+							databaseSimple.deleteDBInfo('Favourite',query);	//Favourite
+							databaseSimple.deleteDBInfo('Saves', queryID);		//Saves
+							databaseSimple.deleteDBInfo('Comments', query);	//Comments
+							databaseSimple.deleteDBInfo('Votes', query);		//Votes
+							databaseSimple.deleteDBInfo('Tags', query);		//Tags
 							
 							console.log("Save " + saveID + " was deleted");
 							
@@ -121,10 +126,10 @@ function setPublish(saveID, userKey, isPublished, callback_)
 			var query = {}
 			query['ID'] = parseInt(saveID);
 						
-			getDBInfo('Saves', query, function(saveInfo) {
+			databaseSimple.getDBInfo('Saves', query, function(saveInfo) {
 				if(saveInfo[0].Username == userName)
 				{
-					changeDBInfo('Saves', 'ID', parseInt(saveID), 'Published', isPublished);
+					databaseSimple.changeDBInfo('Saves', 'ID', parseInt(saveID), 'Published', isPublished);
 					callback_();
 				}
 				else
@@ -233,13 +238,13 @@ function getSaveInfo(saveID, callback_)
 			var query = {};
 			query['ID'] = parseInt(saveID);
 			
-			getDBInfo('Saves', query, function(data) {
+			databaseSimple.getDBInfo('Saves', query, function(data) {
 				if(data.length > 0)
 				{
 					if(data[0].Views === undefined)
-						changeDBInfo('Saves', 'ID', saveID, 'Views', 1);
+						databaseSimple.changeDBInfo('Saves', 'ID', saveID, 'Views', 1);
 					else
-						changeDBInfo('Saves', 'ID', saveID, 'Views', parseInt(data[0].Views+1));
+						databaseSimple.changeDBInfo('Saves', 'ID', saveID, 'Views', parseInt(data[0].Views+1));
 				} else {
 					db.close();
 					callback_(-1);
@@ -250,7 +255,7 @@ function getSaveInfo(saveID, callback_)
 				var query = {};
 				query[name] = parseInt(value);
 				
-				getDBInfo('Comments', query, function(data2) {
+				databaseSimple.getDBInfo('Comments', query, function(data2) {
 					if(data.length > 0)
 					{
 						delete data[0]._id;
@@ -630,15 +635,18 @@ function reportSave(userID, userKey, reason, saveID, callback_)
 					if(err == null) {
 						fs.appendFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n', function (err) {
 							if(err)
+							{
 								console.log(err);
+								callback_(err);
+							}
 							callback_();
 						});
 					} else if(err.code == 'ENOENT') {
 						fs.writeFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n');
-						callback_();
+						callback_('Error: ENOENT');
 					} else {
 						console.log('Some other error: ', err.code);
-						callback_();
+						callback_(err.code);
 					}
 				});
 			} else {
@@ -798,3 +806,29 @@ function login(userName, callback_)
 		});
 	});
 }
+
+module.exports.generateHash = generateHash;
+module.exports.getSession = getSession;
+module.exports.IDtoName = IDtoName;
+module.exports.login = login;
+module.exports.getComments = getComments
+module.exports.addComment = addComment
+module.exports.addSave = addSave;
+module.exports.reportSave = reportSave;
+module.exports.addFavourite = addFavourite;
+module.exports.getFavourite = getFavourite;
+module.exports.getVote = getVote;
+module.exports.saveVote = saveVote;
+module.exports.setProfile = setProfile;
+module.exports.getUser = getUser;
+module.exports.checkLastSaveID = checkLastSaveID;
+module.exports.checkUser = checkUser;
+module.exports.getSaveInfo = getSaveInfo;
+module.exports.renderSavePTI = renderSavePTI;
+module.exports.saveVersion = saveVersion;
+module.exports.removeTag = removeTag;
+module.exports.addTag = addTag;
+module.exports.setPublish = setPublish;
+module.exports.deleteSave = deleteSave;
+module.exports.getTags = getTags;
+module.exports.removeFavourite = removeFavourite;

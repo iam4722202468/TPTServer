@@ -5,9 +5,9 @@ var express = require('express'),
 	formidable = require('formidable'),
 	mkdirp = require('mkdirp');
 
-eval(fs.readFileSync('database.js')+'');
-eval(fs.readFileSync('databaseSimple.js')+'');
-eval(fs.readFileSync('search.js')+'');
+var database = require('./database.js');
+var databaseSimple = require('./databaseSimple.js');
+var search = require('./search.js');
 
 app.post('/Save.api', function(req,res) {
 	var userID = req.headers['x-auth-user-id'];
@@ -25,7 +25,7 @@ app.post('/Save.api', function(req,res) {
 		
 		var publish = fields.Publish != "Private";
 		
-		addSave(userID, userKey, fields.Name, fields.Description, publish, time, function(data) {
+		database.addSave(userID, userKey, fields.Name, fields.Description, publish, time, function(data) {
 			if(data.length !== undefined) { //not sure why this works...
 				fs.unlinkSync(filePath);
 				res.send(data);
@@ -35,16 +35,16 @@ app.post('/Save.api', function(req,res) {
 				version = data.Version
 				filename = data.ID + '';
 				
-				renderSavePTI(filePath, version, filename, function() {
+				database.renderSavePTI(filePath, version, filename, function() {
 					fs.rename(filePath, __dirname + "/static/cps/" + filename + '.cps');
-					saveVersion(filename, version);
+					database.saveVersion(filename, version);
 				});
 			}
 		});
 	});
 	
 	form.on('file', function(field, file) {
-		checkLastSaveID(function(data) {
+		database.checkLastSaveID(function(data) {
 			console.log(data + " is the current ID");
 			filePath = file.path;
 		});
@@ -62,7 +62,7 @@ app.post('/Vote.api', function(req,res) {
 	form.parse(req, function(err, fields, files) {		
 		var voteDirection = fields.Action;
 		var saveID = fields.ID;
-		saveVote(userID, userKey, saveID, voteDirection, function(returnval) {
+		database.saveVote(userID, userKey, saveID, voteDirection, function(returnval) {
 			console.log(returnval);
 		});
 		
@@ -77,8 +77,8 @@ app.post('/Browse/Comments.json', function(req,res) {
 	
 	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
-		addComment(userID, userKey, fields.Comment, saveID, function(error) {
-			if(!error)
+		database.addComment(userID, userKey, fields.Comment, saveID, function(error) {
+			if(error === undefined)
 				res.send('{"Status":1}');
 			else
 				res.send('{"Status":0, "Error":"' + error + '"}');
@@ -93,8 +93,8 @@ app.post('/Browse/Report.json', function(req,res) {
 	
 	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
-		reportSave(userID, userKey, fields.Reason, saveID, function(data) {
-			if(data !== undefined)
+		database.reportSave(userID, userKey, fields.Reason, saveID, function(error) {
+			if(error === undefined)
 				res.send('{"Status":1}');
 			else
 				res.send('{"Status":0, "Error":"' + error + '"}');
@@ -105,15 +105,15 @@ app.post('/Browse/Report.json', function(req,res) {
 app.get('/Browse/Favourite.json', function(req,res) {
 	if(req.query.Mode == 'Remove')
 	{
-		removeFavourite(req.query.ID, req.query.Key, function(data) {
-			if(!data)
+		database.removeFavourite(req.query.ID, req.query.Key, function(error) {
+			if(error === undefined)
 				res.send('{"Status":1}');
 			else
 				res.send('{"Status":0, "Error":"' + error + '"}');
 		});
 	} else {
-		addFavourite(req.query.ID, req.query.Key, function(data) {
-			if(!data)
+		database.addFavourite(req.query.ID, req.query.Key, function(error) {
+			if(error === undefined)
 				res.send('{"Status":1}');
 			else
 				res.send('{"Status":0, "Error":"' + error + '"}');
@@ -134,7 +134,7 @@ app.get('/Browse.json', function(req,res) {
 	
 	if(query.substr(0,8) == "history:" && query.split(" ")[query.split(" ").length-1].split(":").length == 2 && query.split(" ")[query.split(" ").length-1].split(":")[1] != "")
 	{
-		buildByHistory(parseInt(query.split(" ")[0].split(":")[1]), req.query.Start, req.query.Count, function(data) {
+		search.buildByHistory(parseInt(query.split(" ")[0].split(":")[1]), req.query.Start, req.query.Count, function(data) {
 			res.send(data);
 		})
 	}
@@ -143,7 +143,7 @@ app.get('/Browse.json', function(req,res) {
 		var saveID = {};
 		saveID['ID'] = parseInt(query.split(" ")[0].split(":")[1]);
 		
-		getDBInfo('Saves', saveID, function(data) {
+		databaseSimple.getDBInfo('Saves', saveID, function(data) {
 			if(data.length > 0)
 			{
 				data[0].Version = 0;
@@ -169,7 +169,7 @@ app.get('/Browse.json', function(req,res) {
 				query = query.split(" ")[query.split(" ").length-1];
 			
 		}
-		buildByUser(userName, function(data) {
+		search.buildByUser(userName, function(data) {
 			searchAndSort(req.query.Start, req.query.Count, data.Saves, query, function(returnJSON) {
 				res.send(returnJSON);
 			});
@@ -180,8 +180,8 @@ app.get('/Browse.json', function(req,res) {
 		if(req.query.Category == "Favourites")
 		{
 			//console.log('Searching by Favourite');
-			buildByFavourite(userID, userKey, function(data) {
-				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+			search.buildByFavourite(userID, userKey, function(data) {
+				search.searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
 					res.send(returnJSON);
 				});
 			});
@@ -189,24 +189,24 @@ app.get('/Browse.json', function(req,res) {
 		else
 		{
 			//console.log('Searching by Own');
-			buildByOwn(userID, userKey, function(data) {
-				searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
+			search.buildByOwn(userID, userKey, function(data) {
+				search.searchAndSort(req.query.Start, req.query.Count, data.Saves, req.query.Search_Query, function(returnJSON) {
 					res.send(returnJSON);
 				});
 			});
 		}
 	} else if(req.query.Start == '0' && req.query.Search_Query == '') {
 		//console.log("Building FP");
-		buildFP(req.query.Start, req.query.Count, function(data) {
+		search.buildFP(req.query.Start, req.query.Count, function(data) {
 			res.send(data);
 		});
 	} else {
 		if(req.query.Search_Query == '') {
-			buildBySort('Score', req.query.Start, req.query.Count, function(data) {
+			search.buildBySort('Score', req.query.Start, req.query.Count, function(data) {
 				res.send(data);
 			});
 		} else {
-			buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
+			search.buildByAllSearch(req.query.Start, req.query.Count, req.query.Search_Query, function(data) {
 				res.send(data);
 			});
 		}
@@ -219,15 +219,14 @@ app.get('/Browse/View.json', function(req,res) {
 	var userID = req.headers['x-auth-user-id'];
 	var userKey = req.headers['x-auth-session-key'];
 	
-  	getSaveInfo(req.query.ID, function(data) {
+  	database.getSaveInfo(req.query.ID, function(data) {
 		if(data != -1)
 		{
 			if(userKey !== undefined)
 			{
-				getVote(userID, req.query.ID, function(voteDirection) {
+				database.getVote(userID, req.query.ID, function(voteDirection) {
 					data.ScoreMine = voteDirection;
-					//
-					getFavourite(userID, req.query.ID, function(isFavourite) {
+					database.getFavourite(userID, req.query.ID, function(isFavourite) {
 						if(isFavourite)
 							data.Favourite = true;
 						
@@ -244,7 +243,7 @@ app.get('/Browse/View.json', function(req,res) {
 app.get('/Browse/Comments.json', function(req,res) {
 	console.log(req.query);
 	console.log('/Browse/Comments.json');
-	getComments(req.query.ID, req.query.Start, req.query.Count, function(saves) {
+	database.getComments(req.query.ID, req.query.Start, req.query.Count, function(saves) {
 		res.send(saves);
 	})
 });
@@ -254,28 +253,28 @@ app.get('/Browse/EditTag.json', function(req,res) {
 	console.log('/Browse/EditTag.json');
 	
 	if(req.query.Op ==  'add')
-		addTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
+		database.addTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
 			if(data !== undefined)
 				res.send('{"Status":0,"Error":"' + data + '"}');
 			else
 			{
 				var toSend = {};
 				toSend.Status = 1;
-				getTags(req.query.ID, function(data) {
+				database.getTags(req.query.ID, function(data) {
 					toSend.Tags = data;
 					res.send(toSend);
 				});
 			}
 		});
 	else if(req.query.Op ==  'delete')
-		removeTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
+		database.removeTag(req.query.ID, req.query.Tag, req.query.Key, function(data) {
 			if(data !== undefined)
 				res.send('{"Status":0, "Error":"' + data + '"}');
 			else
 			{
 				var toSend = {};
 				toSend.Status = 1;
-				getTags(req.query.ID, function(data) {
+				database.getTags(req.query.ID, function(data) {
 					toSend.Tags = data;
 					res.send(toSend);
 				});
@@ -289,7 +288,7 @@ app.get('/Browse/Delete.json', function(req,res) {
 	
 	if(req.query.Mode == 'Unpublish')
 	{
-		setPublish(req.query.ID, req.query.Key, false, function(data) {
+		database.setPublish(req.query.ID, req.query.Key, false, function(data) {
 			if(data !== undefined)
 				res.send('{"Status":0,"Error":"' + data + '"}');
 			else
@@ -298,7 +297,7 @@ app.get('/Browse/Delete.json', function(req,res) {
 	}
 	else if(req.query.Mode == 'Delete')
 	{
-		deleteSave(req.query.ID, req.query.Key, function(data) {
+		database.deleteSave(req.query.ID, req.query.Key, function(data) {
 			if(data !== undefined)
 				res.send('{"Status":0,"Error":"' + data + '"}');
 			else
@@ -319,7 +318,7 @@ app.post('/Profile.json', function(req,res) {
 	
   	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
-		setProfile(userID, userKey, fields);
+		database.setProfile(userID, userKey, fields);
 		res.send('{"Status":1}');
 	});
   console.log('/Profile.json');
@@ -330,7 +329,7 @@ app.get('/User.json', function(req,res) {
 	var username = req.query.Name;
 	console.log('/User.json');
 	
-	getUser(username, function(data) {
+	database.getUser(username, function(data) {
 		res.send(data);
 	});
 });
@@ -339,10 +338,10 @@ app.post('/Login.json', function(req,res) {
   	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
 
-		checkUser(fields.Username, fields.Hash, function(data) {
+		database.checkUser(fields.Username, fields.Hash, function(data) {
 			if(data)
 			{
-				login(fields.Username, function(senddata){
+				database.login(fields.Username, function(senddata){
 					res.send(senddata);
 				});
 			}
@@ -354,7 +353,7 @@ app.post('/Login.json', function(req,res) {
 });
 
 app.get('/Browse/Tags', function(req,res) {
-	res.send('{"moo"}');
+	res.end();
 });
 
 app.use(function (req, res) {
@@ -362,7 +361,7 @@ app.use(function (req, res) {
 	if(req.originalUrl.indexOf('/Browse/View.html') >= 0)
 	{
 		console.log(req.query);
-		setPublish(req.query.ID, req.query.Key, true, function(data) {
+		database.setPublish(req.query.ID, req.query.Key, true, function(data) {
 			if(data !== undefined)
 				res.send('{"Status":0,"Error":"' + data + '"}');
 			else

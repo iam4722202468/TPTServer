@@ -83,7 +83,7 @@ router.post('/', function(req, res, next) {
 		}
 		if((formData[place].length < formDataLengthsMin[place] || formData[place].length > formDataLengthsMax[place]) && isGood) {
 			isGood = false;
-			error = place + " field must be between " + formDataLengthsMin[place].toString() + " and " + formDataLengthsMax[place].toString();
+			error = place + " field must be between " + formDataLengthsMin[place].toString() + " and " + formDataLengthsMax[place].toString() + " characters";
 			res.render('register', { title: 'Register' });
 		}
 	}

@@ -62,6 +62,13 @@ MongoClient.connect(url, function (err, db) {
 					console.log("Created png folder");
 			});
 			
+			mkdirp(__dirname + "/tmp/", function(err) { 
+				if(err)
+					console.log(err)
+				else
+					console.log("Created tmp folder");
+			});
+			
 			mkdirp(__dirname + "/static/deleted/", function(err) { 
 				if(err)
 					console.log(err)

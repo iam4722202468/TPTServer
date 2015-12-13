@@ -43,7 +43,7 @@ app.post('/Save.api', function(req,res) {
 		
 		database.addSave(userID, userKey, fields.Name, fields.Description, publish, time, function(data) {
 			if(data.length !== undefined) { //not sure why this works...
-				fs.unlinkSync(filePath);
+				fs.unlinkSync(file.Data.path);
 				res.send(data);
 			} else {
 				res.send("OK " + data.ID);

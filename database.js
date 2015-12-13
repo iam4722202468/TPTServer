@@ -226,12 +226,13 @@ function renderSavePTI(filePath, version, filename, callback_)
 	var renderer = require("child_process").exec(__dirname + "/render/render64 " + filePath.replace(/^.*[\\\/]/, '') + " " + filename)
 	
 	renderer.on('exit', function() {
-		fs.unlinkSync(__dirname + "/render/" + filename + '.png');
-		fs.unlinkSync(__dirname + "/render/" + filename + '-small.png');
+		fs.rename(__dirname + "/render/" + filename + '.png', __dirname + "/static/png/" + filename + '.png');
+		fs.rename(__dirname + "/render/" + filename + '-small.png', __dirname + "/static/png/" + filename + '-small.png');
+		
 		fs.rename(__dirname + "/render/" + filename + '.pti', __dirname + "/static/pti/saves/" + filename + '.pti');
 		fs.rename(__dirname + "/render/" + filename + '-small.pti', __dirname + "/static/pti/saves/" + filename + '_small.pti');
 		
-		mkdirp(__dirname + '/static/pti/saves/'+filename, function(err) { 	
+		mkdirp(__dirname + '/static/pti/saves/'+filename, function(err) {
 			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + version + '.pti'));
 			fs.createReadStream(__dirname + "/static/pti/saves/" + filename + '_small.pti').pipe(fs.createWriteStream(__dirname + "/static/pti/saves/" + filename + '/' + filename + '_' + version + '_small.pti'));
 		});
@@ -365,7 +366,7 @@ function getUser(userName, callback_)
 						if (docs[0].hasOwnProperty(name)) {
 							if(name == 'Name')
 								toReturn.User.Username = userName;
-							else if(name != '_id' && name != 'Hash' && name != 'sessionID')
+							else if(name == "Biography" || name == "ID" || name == "Location" || name == "Name" || name == "Age" || name == "Website")
 								toReturn.User[name] = docs[0][name];
 						}
 					}
@@ -675,7 +676,7 @@ function reportSave(userID, userKey, reason, saveID, callback_)
 
 function addSave(userID, userKey, saveName, saveDescription, savePublish, time, callback_)
 {
-	if(validator.isAscii(saveName) && validator.isAscii(saveDescription)) {
+	if(validator.isAscii(saveName) && (validator.isAscii(saveDescription) || saveDescription == "")) {
 		IDtoName(userID, function(userName){
 			getSession(userName, function(dataKey) {
 				if(dataKey == userKey)
@@ -742,8 +743,12 @@ function addSave(userID, userKey, saveName, saveDescription, savePublish, time, 
 				}
 			});
 		});
-	} else
-		callback_("All fields must contain only ascii values");
+	} else {
+		if(saveName == "")
+			callback_("Save must have a name");
+		else
+			callback_("All fields must contain only ascii values");
+	}
 }
 
 function getComments(saveID, start, length, callback_)

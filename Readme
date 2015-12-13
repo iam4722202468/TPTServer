@@ -1,0 +1,10 @@
+----- Setup ----- 
+	1. Install mongodb
+	2. Install node.js
+	3. Install needed node.js libraries (using npm is the easiest way)
+	4. Run install.js (node install.js)
+	5. Run main.js (node main.js)
+	6. ??? PROFIT !!!
+
+----- How to use ----- 
+	

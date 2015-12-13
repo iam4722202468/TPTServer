@@ -3,6 +3,7 @@ var mongodb = require('mongodb'),
 	url = 'mongodb://localhost:27017/tpt';
 
 var rimraf = require('rimraf');
+var mkdirp = require('mkdirp');
 
 MongoClient.connect(url, function (err, db) {
 	if (err) {
@@ -17,10 +18,55 @@ MongoClient.connect(url, function (err, db) {
 			var collection = db.collection('Info');
 			
 			collection.insert({
-				LastSaveID: 0,
+				LastSaveID: 1,
 				LastUserID: 0
 			}, function() {
 				db.close();
+			});
+			
+			try {
+				rimraf(__dirname + "/static/pti/", function(){});
+				rimraf(__dirname + "/static/cps/", function(){});
+				rimraf(__dirname + "/static/png/", function(){});
+				rimraf(__dirname + "/static/deleted/", function(){});
+			} catch(e) {
+				console.log(e)
+			}
+			
+			mkdirp(__dirname + "/static/pti/", function(err) {
+				if(err)
+					console.log(err)
+				else {
+					console.log("Created pti folder");
+					
+					mkdirp(__dirname + "/static/pti/saves", function(err) { 
+						if(err)
+							console.log(err)
+						else
+							console.log("Created pti save folder");
+					});
+				}
+			});
+			
+			mkdirp(__dirname + "/static/cps/", function(err) { 
+				if(err)
+					console.log(err)
+				else
+					console.log("Created cps folder");
+			});
+			
+			mkdirp(__dirname + "/static/png/", function(err) { 
+				if(err)
+					console.log(err)
+				else
+					console.log("Created png folder");
+			});
+			
+			mkdirp(__dirname + "/static/deleted/", function(err) { 
+				if(err)
+					console.log(err)
+				else
+					console.log("Created deleted folder");
 			});
 		});
 	}

@@ -40,7 +40,12 @@ function createAccount(inputData, callback_)
 						Hash: md5(inputData.displayName + '-' + md5(inputData.password)),
 						ID: parseInt(data.User)+1,
 						Location: inputData.location,
-						Name: inputData.displayName
+						Name: inputData.displayName,
+						Email: inputData.email,
+						Age: parseInt(inputData.age), 			//I have found the secret to not aging
+						Website: inputData.website,
+						FirstName: inputData.firstName,
+						LastName: inputData.lastName
 					}, function() {
 						db.close();
 						callback_(parseInt(data.User)+1);
@@ -67,6 +72,7 @@ router.get('/', function(req, res, next) {
   displayName: 'ada',
   email: 'moo@moo.moo',
   age: '18',
+  website: "www.moo.com",
   location: 'asdsa',
   biography: 'asdas',
   password: 'ace',
@@ -76,8 +82,8 @@ router.get('/', function(req, res, next) {
 router.post('/', function(req, res, next) {
 	formData = {firstName:null, lastName:null, email:null, displayName:null, age:null, location:null, biography:null, password:null, passwordConfirmation:null};
 	
-	formDataLengthsMax = {firstName:40, lastName:40, email:100, displayName:30, age:2, location:33, biography:1000, password:30, passwordConfirmation:30};
-	formDataLengthsMin = {firstName:3, lastName:3, email:5, displayName:3, age:0, location:0, biography:0, password:0, passwordConfirmation:0};
+	formDataLengthsMax = {firstName:40, lastName:40, email:100, website:200, displayName:30, age:2, location:33, biography:1000, password:30, passwordConfirmation:30};
+	formDataLengthsMin = {firstName:3, lastName:3, email:5, website:0, displayName:3, age:0, location:0, biography:0, password:0, passwordConfirmation:0};
 	
 	isGood = true;
 	authorized = false;
@@ -109,7 +115,7 @@ router.post('/', function(req, res, next) {
 		} else if(formData.password != formData.passwordConfirmation) {
 			error = "Those passwords do not match"
 			res.render('register', { title: 'Register' });
-		} else if(formData.password.length < 6) {
+		} else if(formData.password.length < 3) {
 			error = "That password is too short. Password length must be at least 6 chars"
 			res.render('register', { title: 'Register' });
 		} else if(parseInt(formData.age) % 1 !== 0) {

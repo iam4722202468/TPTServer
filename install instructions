@@ -1,5 +1,0 @@
-install mongodb
-
-make tpt database
-db.Info.insert({"LastSaveID":0, "LastUserID":0})
-db.User.insert({"Biography":"lol change me", "Hash":"[redacted]", "ID":1, "Location":"moo moo land", "Name":"iam"})

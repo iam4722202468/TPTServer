@@ -32,22 +32,24 @@ block content
 							input#display_name.form-control.input-lg(type='text', name='displayName', placeholder='Display Name', tabindex='3', required)
 						.form-group
 							input#email.form-control.input-lg(type='email', name='email', placeholder='Email Address', tabindex='4', required)
+						.form-group
+							input#website.form-control.input-lg(type='text', name='website', placeholder='Website', tabindex='5')
 						.row
 							.col-xs-12.col-sm-3.col-md-3
 								.form-group
-									input#age.form-control.input-lg(type='number',min='0', max='99' name='age', placeholder='Age', tabindex='5' required)
+									input#age.form-control.input-lg(type='number',min='0', max='99' name='age', placeholder='Age', tabindex='6' required)
 							.col-xs-12.col-sm-9.col-md-9
 								.form-group
-									input#location.form-control.input-lg(type='text', name='location', placeholder='Location', tabindex='5')
+									input#location.form-control.input-lg(type='text', name='location', placeholder='Location', tabindex='6')
 						.form-group
-							textarea#biography.form-control.input-lg(name='biography', placeholder='Biography', tabindex='6')
+							textarea#biography.form-control.input-lg(name='biography', placeholder='Biography', tabindex='7')
 						.row
 							.col-xs-12.col-sm-6.col-md-6
 								.form-group
-									input#password.form-control.input-lg(type='password', name='password', placeholder='Password', tabindex='7', required)
+									input#password.form-control.input-lg(type='password', name='password', placeholder='Password', tabindex='8', required)
 							.col-xs-12.col-sm-6.col-md-6
 								.form-group
-									input#passwordConfirmation.form-control.input-lg(type='password', name='passwordConfirmation', placeholder='Confirm Password', tabindex='7', required)
+									input#passwordConfirmation.form-control.input-lg(type='password', name='passwordConfirmation', placeholder='Confirm Password', tabindex='8', required)
 						if error !== undefined
 							.form-group
 								.alert.alert-danger(role='alert')
@@ -56,4 +58,4 @@ block content
 									|	#{error}
 						.row
 							.col-xs-12.col-md-12
-								input.btn.btn-primary.btn-block.btn-lg(type='submit', value='Register', tabindex='8')
+								input.btn.btn-primary.btn-block.btn-lg(type='submit', value='Register', tabindex='9')

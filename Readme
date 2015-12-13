@@ -45,7 +45,7 @@ Source can be found here
 	modify lines 
 		#define SERVER 
 	and 
-		#define SCRIPTSERVER
+		#define STATICSERVER
 	in 
 		/src/Config.h
 	to have your server address, then compile the source using the instructions here http://powdertoy.co.uk/Wiki/W/Main_Page.html#How_to_Build

@@ -82,9 +82,14 @@ function deleteSave(saveID, userKey, callback_)
 					
 					rimraf(__dirname + "/static/pti/saves/" + saveID, function(){});
 					rimraf(__dirname + "/static/cps/" + saveID, function(){});
-					fs.unlinkSync(__dirname + "/static/pti/saves/" + saveID + "_small.pti");
-					fs.unlinkSync(__dirname + "/static/pti/saves/" + saveID + ".pti");
-					fs.unlinkSync(__dirname + "/static/cps/" + saveID + '.cps');
+					
+					try {
+						fs.unlinkSync(__dirname + "/static/pti/saves/" + saveID + "_small.pti");
+						fs.unlinkSync(__dirname + "/static/pti/saves/" + saveID + ".pti");
+						fs.unlinkSync(__dirname + "/static/cps/" + saveID + '.cps');
+					} catch(e) {
+						console.log(e);
+					}
 					
 					getSaveInfo(saveID, function(saveData) {
 						fs.writeFile(__dirname + "/static/deleted/" + saveID + '_' + userName + '.json', JSON.stringify(saveData), function(err) {
@@ -320,7 +325,7 @@ function checkIfSaveExists(userName, saveName, callback_)
 	});
 }
 
-function checkLastSaveID(callback_)
+function checkLastID(callback_)
 {
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
@@ -329,11 +334,10 @@ function checkLastSaveID(callback_)
 			var collection = db.collection('Info');	
 			
 			collection.find().toArray(function(err, docs){
-				var lastUser = docs[0].LastUserID;
-				var lastSave = docs[0].LastSaveID;
+				var lastID = {User:docs[0].LastUserID, Save:docs[0].LastSaveID};
 				
 				db.close();
-				callback_(lastSave);
+				callback_(lastID);
 			});
 		}
 	});
@@ -821,7 +825,7 @@ module.exports.getVote = getVote;
 module.exports.saveVote = saveVote;
 module.exports.setProfile = setProfile;
 module.exports.getUser = getUser;
-module.exports.checkLastSaveID = checkLastSaveID;
+module.exports.checkLastID = checkLastID;
 module.exports.checkUser = checkUser;
 module.exports.getSaveInfo = getSaveInfo;
 module.exports.renderSavePTI = renderSavePTI;

@@ -4,7 +4,8 @@ var express = require('express'),
 	fs = require('fs'),
 	formidable = require('formidable'),
 	mkdirp = require('mkdirp'),
-	path = require('path');
+	path = require('path'),
+	favicon = require('serve-favicon');
 
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -12,6 +13,7 @@ var bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(favicon(__dirname + '/static/favicon.ico'));
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -58,8 +60,8 @@ app.post('/Save.api', function(req,res) {
 	});
 	
 	form.on('file', function(field, file) {
-		database.checkLastSaveID(function(data) {
-			console.log(data + " is the current ID");
+		database.checkLastID(function(data) {
+			console.log(data.Save + " is the current ID");
 			filePath = file.path;
 		});
 	})

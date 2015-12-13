@@ -1,4 +1,9 @@
------ Setup ----- 
+iam's open source tpt server
+
+Source can be found here
+	http://iam.starcatcher.us/iam/TPTServer/src/master
+
+----- Setup ----------
 	1. Install mongodb
 	2. Install node.js
 	3. Install needed node.js libraries (using npm is the easiest way)
@@ -7,4 +12,57 @@
 	6. ??? PROFIT !!!
 
 ----- How to use ----- 
+	When running properly, a register page can be found at http://<yourWebsite>:<port>/register
+	Creating a client and connect are explained later
+
+----- Changing Server port ------
+	At the bottom of main.js you can change the line
+		http.listen(3000, function(){
+	to change the port the server runs on
+
+----- Searching ------
+	Using AwesomeSearchandSort™©® you can safely and easily search through saves, order saves by certain criteria, and much, much more!
+	Written in C++ because i was getting bored of javascript
 	
+	Features
+		sorting (sort:<field>)
+		history search (history:<id>)
+		user search (user:<username>)
+		search search ()
+	
+	search fields: ['ID', 'DateCreated', 'Date', 'Version', 'Score', 'ScoreUp', 'ScoreDown', 'Views', 'Name', 'ShortName', 'Username', 'Published']
+	
+	example usage:
+		sort:id
+		
+	A '!' can be put after sort: to reverse the order of the saves
+	ex.
+		sort:!id
+
+----- Creating Client -----
+	To make a client for you server you must compile the tpt source which can be downloaded here https://github.com/simtr/The-Powder-Toy
+	
+	modify lines 
+		#define SERVER 
+	and 
+		#define SCRIPTSERVER
+	in 
+		/src/Config.h
+	to have your server address, then compile the source using the instructions here http://powdertoy.co.uk/Wiki/W/Main_Page.html#How_to_Build
+
+
+An example server is being run at iam.starcatcher.us:3100. Register at http://iam.starcatcher.us:3100/register
+Connect with these clients:
+	Windows
+	Linux
+
+
+Please consider emailing me money at iam4722202468@gmail.com or supporting cracker64's server (with money) http://starcatcher.us/
+I can be found in #powder (iam or iamaway). Feel free to ask about the server code, how to set it up, or anything else you want to know.
+If you find a bug please tell me!
+
+To do:
+	Admin web panel
+	Web interface
+	Avatar pictures
+	Save info on user profile

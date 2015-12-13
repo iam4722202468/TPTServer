@@ -24,28 +24,30 @@ block content
 						.row
 							.col-xs-12.col-sm-6.col-md-6
 								.form-group
-									input#first_name.form-control.input-lg(type='text', name='firstName', placeholder='First Name', tabindex='1', required)
+									input#firstName.form-control.input-lg(type='text', name='firstName', placeholder='First Name', tabindex='1', required)
 							.col-xs-12.col-sm-6.col-md-6
 								.form-group
-									input#last_name.form-control.input-lg(type='text', name='lastName', placeholder='Last Name', tabindex='2' required)
+									input#lastName.form-control.input-lg(type='text', name='lastName', placeholder='Last Name', tabindex='2' required)
 						.form-group
 							input#display_name.form-control.input-lg(type='text', name='displayName', placeholder='Display Name', tabindex='3', required)
+						.form-group
+							input#email.form-control.input-lg(type='email', name='email', placeholder='Email Address', tabindex='4', required)
 						.row
 							.col-xs-12.col-sm-3.col-md-3
 								.form-group
-									input#age.form-control.input-lg(type='number',min='0', max='99' name='age', placeholder='Age', tabindex='4' required)
+									input#age.form-control.input-lg(type='number',min='0', max='99' name='age', placeholder='Age', tabindex='5' required)
 							.col-xs-12.col-sm-9.col-md-9
 								.form-group
-									input#location.form-control.input-lg(type='text', name='location', placeholder='Location', tabindex='4')
+									input#location.form-control.input-lg(type='text', name='location', placeholder='Location', tabindex='5')
 						.form-group
-							textarea#biography.form-control.input-lg(name='biography', placeholder='Biography', tabindex='5')
+							textarea#biography.form-control.input-lg(name='biography', placeholder='Biography', tabindex='6')
 						.row
 							.col-xs-12.col-sm-6.col-md-6
 								.form-group
-									input#password.form-control.input-lg(type='password', name='password', placeholder='Password', tabindex='6', required)
+									input#password.form-control.input-lg(type='password', name='password', placeholder='Password', tabindex='7', required)
 							.col-xs-12.col-sm-6.col-md-6
 								.form-group
-									input#password_confirmation.form-control.input-lg(type='password', name='passwordConfirmation', placeholder='Confirm Password', tabindex='6', required)
+									input#passwordConfirmation.form-control.input-lg(type='password', name='passwordConfirmation', placeholder='Confirm Password', tabindex='7', required)
 						if error !== undefined
 							.form-group
 								.alert.alert-danger(role='alert')
@@ -54,4 +56,4 @@ block content
 									|	#{error}
 						.row
 							.col-xs-12.col-md-12
-								input.btn.btn-primary.btn-block.btn-lg(type='submit', value='Register', tabindex='7')
+								input.btn.btn-primary.btn-block.btn-lg(type='submit', value='Register', tabindex='8')

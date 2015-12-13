@@ -186,7 +186,7 @@ app.get('/Browse.json', function(req,res) {
 			
 		}
 		search.buildByUser(userName, function(data) {
-			searchAndSort(req.query.Start, req.query.Count, data.Saves, query, function(returnJSON) {
+			search.searchAndSort(req.query.Start, req.query.Count, data.Saves, query, function(returnJSON) {
 				res.send(returnJSON);
 			});
 		});

@@ -4,6 +4,8 @@ var mongodb = require('mongodb'),
 	fs = require('fs'),
 	mkdirp = require('mkdirp');
 
+var validator = require('validator');
+
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb://localhost:27017/tpt';
 
@@ -147,37 +149,41 @@ function setPublish(saveID, userKey, isPublished, callback_)
 
 function addTag(saveID, tagValue, userKey, callback_)
 {
-	checkKey(userKey, function(loginCorrect, userName, userID) {
-		if(loginCorrect)
-		{
-			getTags(saveID, function(saveTags) {
-				if(saveTags.indexOf(tagValue) > -1)
-					callback_('Tag already exists');
-				else
-				{
-					MongoClient.connect(url, function (err, db) {
-						if (err) {
-							console.log('Unable to connect to the mongoDB server. Error:', err);
-						} else {
-							db.collection("Tags", function(error, collection) {
-								collection.insert({
-									SaveID: parseInt(saveID),
-									UserID: parseInt(userID),
-									Tag: tagValue
-								}, function() {
-									console.log(userName + " successfully added tag to save " + saveID);
-									db.close();
-									callback_();
+	if(validator.isAscii(tagValue)) {
+		checkKey(userKey, function(loginCorrect, userName, userID) {
+			if(loginCorrect)
+			{
+				getTags(saveID, function(saveTags) {
+					if(saveTags.indexOf(tagValue) > -1)
+						callback_('Tag already exists');
+					else
+					{
+						MongoClient.connect(url, function (err, db) {
+							if (err) {
+								console.log('Unable to connect to the mongoDB server. Error:', err);
+							} else {
+								db.collection("Tags", function(error, collection) {
+									collection.insert({
+										SaveID: parseInt(saveID),
+										UserID: parseInt(userID),
+										Tag: tagValue
+									}, function() {
+										console.log(userName + " successfully added tag to save " + saveID);
+										db.close();
+										callback_();
+									});
 								});
-							});
-						}
-					});
-				}
-			});
-		} else {
-			callback_('Invalid Login');
-		}
-	});
+							}
+						});
+					}
+				});
+			} else {
+				callback_('Invalid Login');
+			}
+		});
+	} else {
+		callback_("All fields must contain only ascii values");
+	}
 }
 
 function removeTag(saveID, tagValue, userKey, callback_)
@@ -431,7 +437,7 @@ function setProfileDatabase(userName, info)
 	MongoClient.connect(url, function (err, db) {
 		if (err) {
 			console.log('Unable to connect to the mongoDB server. Error:', err);
-		} else {
+		} else if(info.Biography.length < 1000 && info.Location.length <= 33 && validator.isAscii(info.Biography) && validator.isAscii(info.Location)){
 			var collection = db.collection('User');
 			collection.update({"Name":userName}, {$set: {"Biography":info.Biography, "Location":info.Location}});
 			db.close();
@@ -631,105 +637,113 @@ function removeFavourite(saveID, userKey, callback_)
 
 function reportSave(userID, userKey, reason, saveID, callback_)
 {
-	IDtoName(userID, function(userName) {
-		getSession(userName, function(dataKey) {
-			if(dataKey == userKey)
-			{
-				fs.stat(__dirname + '/Reports/' + userID, function(err, stat) {
-					if(err == null) {
-						fs.appendFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n', function (err) {
-							if(err)
-							{
-								console.log(err);
-								callback_(err);
-							}
-							callback_();
-						});
-					} else if(err.code == 'ENOENT') {
-						fs.writeFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n');
-						callback_('Error: ENOENT');
-					} else {
-						console.log('Some other error: ', err.code);
-						callback_(err.code);
-					}
-				});
-			} else {
-				callback_("Invalid Login");
-			}
+	if(reason.length < 1500 && validator.isAscii(reason)) {
+		IDtoName(userID, function(userName) {
+			getSession(userName, function(dataKey) {
+				if(dataKey == userKey)
+				{
+					fs.stat(__dirname + '/Reports/' + userID, function(err, stat) {
+						if(err == null) {
+							fs.appendFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n', function (err) {
+								if(err)
+								{
+									console.log(err);
+									callback_(err);
+								}
+								callback_();
+							});
+						} else if(err.code == 'ENOENT') {
+							fs.writeFile(__dirname + '/Reports/' + userID, "Save ID: " + saveID + " | Reason: " + reason + '\n');
+							callback_('Error: ENOENT');
+						} else {
+							console.log('Some other error: ', err.code);
+							callback_(err.code);
+						}
+					});
+				} else {
+					callback_("Invalid Login");
+				}
+			});
 		});
-	});
+	} else {
+		if(reason.length >= 1500)
+			callback_("Reason too long");
+		else
+			callback_("All fields must contain only ascii values");
+	}
 }
 
 function addSave(userID, userKey, saveName, saveDescription, savePublish, time, callback_)
 {
-	IDtoName(userID, function(userName){
-		getSession(userName, function(dataKey) {
-			if(dataKey == userKey)
-			{
-				MongoClient.connect(url, function (err, db) {
-					if (err) {
-						console.log('Unable to connect to the mongoDB server. Error:', err);
-					} else {
-						console.log('Connection established to', url);
+	if(validator.isAscii(saveName) && validator.isAscii(saveDescription)) {
+		IDtoName(userID, function(userName){
+			getSession(userName, function(dataKey) {
+				if(dataKey == userKey)
+				{
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+							console.log('Connection established to', url);
 
-						var collection = db.collection('Info');
-						
-						collection.find().toArray(function(err, docs){
-							var lastUser = docs[0].LastUserID;
-							var lastSave = docs[0].LastSaveID;
+							var collection = db.collection('Info');
 							
-							checkIfSaveExists(userName, saveName, function(newSaveID) {
-								if(newSaveID < 0)
-								{
-									collection.update({'LastUserID':lastUser}, {$set: {'LastSaveID':lastSave+1}});
-									db.collection("Saves", function(error, collection){
-										collection.insert({
-											ID: lastSave,
-											DateCreated: time,
-											Date: time,
-											Version: 0,
-											Score: 0,
-											ScoreUp: 0,
-											ScoreDown: 0,
-											Name: saveName,
-											ShortName: saveName,
-											Description: saveDescription,
-											Published: savePublish,
-											Username: userName
-										}, function() {
-											console.log("Successfully inserted with ID " + lastSave);
-											callback_({'ID':lastSave, 'Version':0});
+							collection.find().toArray(function(err, docs){
+								var lastUser = docs[0].LastUserID;
+								var lastSave = docs[0].LastSaveID;
+								
+								checkIfSaveExists(userName, saveName, function(newSaveID) {
+									if(newSaveID < 0)
+									{
+										collection.update({'LastUserID':lastUser}, {$set: {'LastSaveID':lastSave+1}});
+										db.collection("Saves", function(error, collection){
+											collection.insert({
+												ID: lastSave,
+												DateCreated: time,
+												Date: time,
+												Version: 0,
+												Score: 0,
+												ScoreUp: 0,
+												ScoreDown: 0,
+												Name: saveName,
+												ShortName: saveName,
+												Description: saveDescription,
+												Published: savePublish,
+												Username: userName
+											}, function() {
+												console.log("Successfully inserted with ID " + lastSave);
+												callback_({'ID':lastSave, 'Version':0});
+											});
 										});
-									});
-									db.close();
-								}
-								else
-								{
-									collection = db.collection('Saves');
-									
-									console.log("Save " + newSaveID + " already in database")
-									
-									getSaveVersion(newSaveID, function(lastVersion) {
-										collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
-										collection.update({"ID" : newSaveID}, {$set: {'Date':time}});
-										collection.update({"ID" : newSaveID}, {$set: {'Description':saveDescription}});
-										collection.update({"ID" : newSaveID}, {$set: {'Published':savePublish}});
-										console.log("The last version is " + parseInt(lastVersion+1));
-										callback_({'ID':newSaveID, 'Version':lastVersion+1});
-									});
-								}
+										db.close();
+									}
+									else
+									{
+										collection = db.collection('Saves');
+										
+										console.log("Save " + newSaveID + " already in database")
+										
+										getSaveVersion(newSaveID, function(lastVersion) {
+											collection.update({"ID" : newSaveID}, {$set: {'Version':lastVersion+1}});
+											collection.update({"ID" : newSaveID}, {$set: {'Date':time}});
+											collection.update({"ID" : newSaveID}, {$set: {'Description':saveDescription}});
+											collection.update({"ID" : newSaveID}, {$set: {'Published':savePublish}});
+											console.log("The last version is " + parseInt(lastVersion+1));
+											callback_({'ID':newSaveID, 'Version':lastVersion+1});
+										});
+									}
+								});
 							});
-						});
-					}
-				});
-			}
-			else
-			{
-				console.log("Invalid login from " + userName);
-				callback_("Invalid login");
-			}
+						}
+					});
+				} else {
+					console.log("Invalid login from " + userName);
+					callback_("Invalid login");
+				}
+			});
 		});
-	});
+	} else
+		callback_("All fields must contain only ascii values");
 }
 
 function getComments(saveID, start, length, callback_)
@@ -759,43 +773,46 @@ function getComments(saveID, start, length, callback_)
 
 function addComment(userID, userKey, comment, saveID, callback_)
 {
-	if(comment.length < 300) //max comment length
-	{
-		IDtoName(userID, function(userName) {
-			getSession(userName, function(dataKey) {
-				if(dataKey == userKey)
-				{
-					MongoClient.connect(url, function (err, db) {
-						if (err) {
-							console.log('Unable to connect to the mongoDB server. Error:', err);
-							callback("Database problem");
-						} else {
-							var collection = db.collection('Comments');
-							getComments(saveID, 0, -1, function(comments) {
-								collection.insert({
-									SaveID: parseInt(saveID),
-									CommentID: comments.length,
-									Username: userName,
-									UserID: userID,
-									Gravatar: "",
-									Text: comment,
-									Timestamp: parseInt(new Date()/1000),
-									FormattedUsername: userName
-								}, function() {
-									console.log("Successfully inserted with Comment " + comment);
-									db.close();
-									callback_();
+	if(validator.isAscii(comment)) {
+		if(comment.length < 1500) //max comment length
+		{
+			IDtoName(userID, function(userName) {
+				getSession(userName, function(dataKey) {
+					if(dataKey == userKey)
+					{
+						MongoClient.connect(url, function (err, db) {
+							if (err) {
+								console.log('Unable to connect to the mongoDB server. Error:', err);
+								callback("Database problem");
+							} else {
+								var collection = db.collection('Comments');
+								getComments(saveID, 0, -1, function(comments) {
+									collection.insert({
+										SaveID: parseInt(saveID),
+										CommentID: comments.length,
+										Username: userName,
+										UserID: userID,
+										Gravatar: "",
+										Text: comment,
+										Timestamp: parseInt(new Date()/1000),
+										FormattedUsername: userName
+									}, function() {
+										console.log("Successfully inserted with Comment " + comment);
+										db.close();
+										callback_();
+									});
 								});
-							});
-						}
-					});
-				} else {
-					callback_("Invalid Login");
-				}
+							}
+						});
+					} else {
+						callback_("Invalid Login");
+					}
+				});
 			});
-		});
-	} else
-	 callback_("Comment too long");
+		} else
+			callback_("Comment too long");
+	 } else
+		callback_("All fields must contain only ascii values");
 }
 
 function login(userName, callback_)

@@ -58,7 +58,7 @@ function createAccount(inputData, callback_)
 
 router.get('/', function(req, res, next) {
 	if (req.cookies !== undefined && req.cookies.remember)
-		authorized = false; //
+		authorized = true; //
 	else
 		authorized = false; 
 	

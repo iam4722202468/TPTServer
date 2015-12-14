@@ -149,7 +149,7 @@ function setPublish(saveID, userKey, isPublished, callback_)
 
 function addTag(saveID, tagValue, userKey, callback_)
 {
-	if(validator.isAscii(tagValue)) {
+	if(validator.isAscii(tagValue) && tagValue.length <= 23) {
 		checkKey(userKey, function(loginCorrect, userName, userID) {
 			if(loginCorrect)
 			{

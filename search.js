@@ -244,7 +244,7 @@ function searchByString(searchString, data, callback_)
 									var saveQuery = {};
 									saveQuery['ID'] = parseInt(d);
 									
-									getDBInfo('Saves', saveQuery, function(saveData) {
+									databaseSimple.getDBInfo('Saves', saveQuery, function(saveData) {
 										saveData[0].Version = 0;
 										returnJSON.Saves.push(saveData[0]);
 										

@@ -1,0 +1,31 @@
+{
+  "name": "TPTServer",
+  "version": "1.0.0",
+  "description": "A server for the the powder toy",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "http://iam.starcatcher.us/iam/tptserver.git"
+  },
+  "keywords": [
+    "tpt",
+    "powder",
+    "toy",
+    "server"
+  ],
+  "author": "iam",
+  "license": "GPL",
+  "dependencies": {
+    "express":"4.13.3",
+    "formidable":"1.0.17",
+    "mkdirp":"0.5.1",
+    "serve-favicon":"2.3.0",
+    "cookie-parser":"1.4.0",
+    "body-parser":"1.14.1",
+    "jade":"1.11.0",
+    "mongodb":"2.0.48",
+    "rimraf":"2.4.3",
+    "validator":"4.4.0",
+    "md5":"2.0.0"
+  }
+}

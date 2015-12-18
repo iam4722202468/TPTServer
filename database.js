@@ -1,7 +1,6 @@
 var mongodb = require('mongodb'),
 	fs = require('fs'),
 	rimraf = require('rimraf'),
-	fs = require('fs'),
 	mkdirp = require('mkdirp');
 
 var validator = require('validator');
